@@ -63,4 +63,3 @@ This repo is my hands-on lab for:
 cpu/         # Scheduling simulations and ML-enhanced RR
 memory/      # Page replacement experiments (LRU, ML, etc.)
 jordyOS/     # Bootable toy operating system with calculator shell
-docs/        # Notes, designs, and planning documents
