@@ -41,7 +41,7 @@ I built a Python simulation and fed it two classic workloads to test how ML-enha
 
 ---
 
-## 📌 Takeaways
+## Takeaways
 
 ### Bursty Workload:
 - **CFS** had the lowest average and best tail latency — fairness pays off
@@ -55,7 +55,7 @@ I built a Python simulation and fed it two classic workloads to test how ML-enha
 
 ---
 
-## 🎓 Final Lessons
+## Final Lessons
 
 - **CFS’s `vruntime` is brilliant** — near SJF performance, yet starvation-proof
 - **ML helps when short tasks dominate** (e.g., API gateways, GPU micro-batching)
