@@ -7,28 +7,60 @@ This is an **ongoing research and learning project**, where I explore fundamenta
 
 ## Focus Areas
 
-- **CPU Scheduling**  
-  Simulations of classic and modern schedulers, including:
-  - Round Robin
-  - CFS (Completely Fair Scheduler)
-  - ML-augmented Round Robin (predicting shortest tasks and dynamic quantum)
+### CPU Scheduling
+Simulations of traditional and modern CPU scheduling strategies, including:
+- Round-Robin
+- CFS (Linux’s Completely Fair Scheduler)
+- ML-augmented RR (shortest-job prediction and dynamic quantum adjustment)
 
-- **Memory Management**  
-  Experiments on page replacement algorithms:
-  - Traditional LRU vs ML-enhanced LRU
-  - FIFO, Clock, and custom strategies
+See: [`/cpu/`](./cpu)
 
-- **Machine Learning in the Kernel**  
-  Prototyping how lightweight ML models can assist scheduling, page replacement, and resource prediction.
+---
+
+### Memory Management
+Page replacement experiments using various eviction policies:
+- Classic LRU, FIFO, Random
+- Machine learning–enhanced LRU
+
+See: [`/memory/`](./memory)
+
+---
+
+### ML in the Kernel
+Early-stage research on using lightweight ML models to assist OS behavior:
+- Predict page reuse
+- Predict job burst times
+- Dynamically adjust scheduler behavior
+
+This layer sits between static OS heuristics and adaptive, data-driven decision making.
+
+---
+
+### jordyOS (WIP)
+A hobbyist operating system built from scratch on macOS, featuring:
+- A custom bootloader
+- A simple VGA text interface
+- A built-in calculator shell
+
+See: [`/jordyOS/`](./jordyOS)
 
 ---
 
 ## Why This Exists
 
-Most OS behavior happens at the kernel level — but textbooks rarely let you tweak or test these ideas directly.
+Most OS behavior lives deep in the kernel — but textbooks often leave no room to experiment.  
+This repo is my hands-on lab for:
 
-This repo is my sandbox:
-- To **simulate and benchmark** ideas safely before writing C kernel code
-- To explore **the boundary between rule-based and data-driven system design**
-- And eventually, to build the **foundations of a minimal operating system**
+- Simulating and testing OS concepts before writing bare-metal C/ASM
+- Exploring the boundary between **traditional kernel logic** and **machine learning**
+- Gradually building toward a minimal, bootable operating system
 
+---
+
+## Directory Structure
+
+```bash
+cpu/         # Scheduling simulations and ML-enhanced RR
+memory/      # Page replacement experiments (LRU, ML, etc.)
+jordyOS/     # Bootable toy operating system with calculator shell
+docs/        # Notes, designs, and planning documents
