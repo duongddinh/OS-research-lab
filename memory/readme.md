@@ -29,19 +29,19 @@ With the rise of ML, it seemed natural to explore smarter page eviction based on
 ## Results
 
 ### Cache Size: 64
-![Cache 64](Figure_1.png)
+![Cache 64](images/Figure_1.png)
 
 ### Cache Size: 128
-![Cache 128](Figure_2.png)
+![Cache 128](images/Figure_2.png)
 
 ### Cache Size: 256
-![Cache 256](Figure_3.png)
+![Cache 256](images/Figure_3.png)
 
 ### Cache Size: 512
-![Cache 512](Figure_4.png)
+![Cache 512](images/Figure_4.png)
 
 ### Hit Rate Comparison
-![Hit Rate Summary](Figure_5.png)
+![Hit Rate Summary](images/Figure_5.png)
 
 ---
 
