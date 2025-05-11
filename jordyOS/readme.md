@@ -102,5 +102,5 @@ $ brew install nasm qemu
 
 ```
 $ make
-$ make run-floppy
+$ make run
 ```
