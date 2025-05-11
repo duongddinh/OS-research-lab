@@ -51,7 +51,7 @@ The OS runs in **16-bit real mode** initially (via the bootloader), then switche
 ## Example Usage
 
 ```txt
-*** jordyOS multitask w/ In-Memory FS ***
+jordyOS multitask w/ In-Memory FS 
 
 sh> help
 Available commands:
