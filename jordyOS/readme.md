@@ -38,6 +38,7 @@ jordyOS ready.  Type e.g.  add 3 5 (operation: add|sub|mul|div)
 $ brew install cdrkit
 $ brew install cdrtools
 $ brew install i686-elf-binutils i686-elf-gcc
+$ brew install nasm qemu
 ```
 
 ### Build and Run the OS
