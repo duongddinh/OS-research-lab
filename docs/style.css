@@ -1,154 +1,242 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Roboto+Mono&display=swap');
+
+:root {
+    --primary-color: #007bff; /* A friendly, modern blue */
+    --primary-hover-color: #0056b3;
+    --text-color: #343a40; /* Dark grey for text */
+    --heading-color: #212529; /* Slightly darker for headings */
+    --bg-color: #f8f9fa; /* Light grey background */
+    --card-bg-color: #ffffff; /* White for content cards/sections */
+    --border-color: #dee2e6;
+    --code-bg-color: #e9ecef;
+    --nav-bg-color: #ffffff;
+    --nav-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    --card-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    --border-radius: 8px; /* Cuter, rounded corners */
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-    line-height: 1.6;
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    line-height: 1.7;
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+.content-wrapper {
+    max-width: 900px; /* Slightly wider */
     margin: 0 auto;
     padding: 20px;
-    max-width: 800px;
-    color: #333;
-    scroll-behavior: smooth; /* Smooth scroll for anchor links */
 }
 
 nav.main-nav {
-    background-color: #f4f4f4;
-    padding: 10px 0;
-    margin-bottom: 20px;
+    background-color: var(--nav-bg-color);
+    padding: 15px 0;
     text-align: center;
-    border-radius: 5px;
-    position: sticky; /* Keep nav visible */
+    position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 1000;
+    box-shadow: var(--nav-shadow);
+    border-bottom: 1px solid var(--border-color);
 }
 
 nav.main-nav a {
-    margin: 0 15px;
+    margin: 0 12px;
     text-decoration: none;
-    color: #0366d6;
-    font-weight: bold;
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 1.05em;
+    padding: 8px 12px;
+    border-radius: var(--border-radius);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-nav.main-nav a:hover {
-    text-decoration: underline;
+nav.main-nav a:hover,
+nav.main-nav a:focus {
+    color: var(--primary-hover-color);
+    background-color: rgba(0, 123, 255, 0.1); /* Light blue background on hover */
+}
+
+section {
+    background-color: var(--card-bg-color);
+    margin-top: 30px;
+    margin-bottom: 30px;
+    padding: 25px 30px; /* More padding */
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    scroll-margin-top: 100px; /* Adjust for sticky nav height */
 }
 
 h1, h2, h3, h4, h5, h6 {
+    font-family: 'Nunito', sans-serif; /* Consistent with body but bolder by default */
+    color: var(--heading-color);
     margin-top: 1.5em;
-    margin-bottom: 0.5em;
-    color: #111;
+    margin-bottom: 0.8em;
+    line-height: 1.3;
 }
 
-h1 { font-size: 2em; }
+h1 {
+    font-size: 2.5em;
+    text-align: center;
+    margin-bottom: 1em;
+    color: var(--primary-color);
+}
+
 h2 {
-    font-size: 1.75em;
-    border-bottom: 2px solid #ccc; /* Make section headers more prominent */
-    padding-bottom: 0.3em;
-    margin-top: 2em; /* More space between sections */
-    scroll-margin-top: 70px; /* Offset for sticky nav */
+    font-size: 2em;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 0.4em;
+    margin-top: 0; /* Reset for section start */
 }
-h3 { font-size: 1.25em; border-bottom: 1px solid #eee; padding-bottom: 0.2em; margin-top: 1.5em;}
-h4 { font-size: 1.1em; }
+section > h2:first-child {
+    margin-top: 0;
+}
 
+
+h3 {
+    font-size: 1.5em;
+    color: var(--primary-color);
+    /* border-bottom: 1px solid #eee; */
+    /* padding-bottom: 0.2em; */
+    margin-top: 2em;
+}
+h4 { font-size: 1.2em; font-weight: 700; }
 
 p {
-    margin-bottom: 1em;
+    margin-bottom: 1.2em;
 }
 
 ul, ol {
-    margin-bottom: 1em;
-    padding-left: 20px;
+    margin-bottom: 1.2em;
+    padding-left: 25px;
 }
 
 li {
-    margin-bottom: 0.5em;
+    margin-bottom: 0.6em;
+}
+
+hr {
+    height: 1px;
+    padding: 0;
+    margin: 40px 0;
+    background-color: var(--border-color);
+    border: 0;
 }
 
 pre {
-    background-color: #f6f8fa;
-    border-radius: 3px;
-    font-size: 85%;
-    line-height: 1.45;
+    background-color: var(--code-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.9em;
+    line-height: 1.6;
     overflow: auto;
-    padding: 16px;
-    margin-bottom: 1em;
-    border: 1px solid #eaecef;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05) inset;
 }
 
 code {
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-    background-color: rgba(27,31,35,0.05);
-    padding: 0.2em 0.4em;
-    margin: 0;
-    font-size: 85%;
-    border-radius: 3px;
+    font-family: 'Roboto Mono', monospace;
+    background-color: var(--code-bg-color);
+    padding: 0.25em 0.5em;
+    margin: 0 0.1em;
+    font-size: 0.875em;
+    border-radius: calc(var(--border-radius) / 2);
+    border: 1px solid var(--border-color);
 }
 
 pre > code {
     padding: 0;
     margin: 0;
-    font-size: 100%;
-    word-break: normal;
-    white-space: pre;
+    font-size: 1em; /* Relative to pre */
     background: transparent;
     border: 0;
 }
 
 table {
-    border-collapse: collapse;
-    margin-bottom: 1em;
+    border-collapse: separate; /* Allows for border-radius on table */
+    border-spacing: 0;
+    margin: 25px 0;
     width: 100%;
-    border: 1px solid #dfe2e5;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    font-size: 0.95em;
 }
 
 th, td {
-    border: 1px solid #dfe2e5;
-    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 15px;
     text-align: left;
 }
+td:first-child, th:first-child {
+    border-left: none;
+}
+td:last-child, th:last-child {
+    border-right: none;
+}
+tr:last-child td {
+    border-bottom: none;
+}
+
 
 th {
-    background-color: #f6f8fa;
-    font-weight: bold;
+    background-color: #f1f3f5; /* Slightly different from code bg */
+    font-weight: 700;
+    color: var(--heading-color);
 }
+/* For rounded corners on first and last cells of header and last row */
+table thead tr:first-child th:first-child { border-top-left-radius: var(--border-radius); }
+table thead tr:first-child th:last-child { border-top-right-radius: var(--border-radius); }
+table tbody tr:last-child td:first-child { border-bottom-left-radius: var(--border-radius); }
+table tbody tr:last-child td:last-child { border-bottom-right-radius: var(--border-radius); }
 
-tr:nth-child(even) {
-    background-color: #f6f8fa;
-}
 
 img {
     max-width: 100%;
     height: auto;
     display: block;
-    margin: 1em auto; /* Center images */
-    border: 1px solid #ddd; /* Optional: add a light border */
-    border-radius: 4px;
+    margin: 25px auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
 }
 
 blockquote {
-    border-left: 4px solid #dfe2e5;
-    padding-left: 1em;
-    color: #6a737d;
-    margin-left: 0;
-    margin-right: 0;
-    margin-bottom: 1em;
+    border-left: 5px solid var(--primary-color);
+    padding: 15px 20px;
+    margin: 25px 0;
+    background-color: #e9ecef; /* Light background for quote */
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    font-style: italic;
+    color: #555;
 }
 
-hr {
-    height: 0.25em;
-    padding: 0;
-    margin: 24px 0;
-    background-color: #e1e4e8;
-    border: 0;
+blockquote p:last-child {
+    margin-bottom: 0;
 }
 
-section { /* Add some padding to sections */
-    padding-top: 10px;
-}
 
-/* Footer styling - optional */
 footer {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid #eee;
+    margin-top: 50px;
+    padding: 30px 20px;
+    border-top: 1px solid var(--border-color);
     font-size: 0.9em;
-    color: #666;
+    color: #6c757d; /* Softer grey */
     text-align: center;
+    background-color: var(--card-bg-color);
+}
+footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+footer a:hover {
+    text-decoration: underline;
+    color: var(--primary-hover-color);
 }
