@@ -7,6 +7,144 @@ The OS runs in **16-bit real mode** initially (via the bootloader), then switche
 
 ---
 
+## High Level System Design
+
+![image](images/IMG_5794.png)
+
+### System Name: jordyOS
+
+**Type:** 32-bit x86 protected-mode kernel  
+**Architecture:** Cooperative multitasking with an in-memory file system
+
+---
+
+### Boot Process
+
+- System powers on and BIOS runs in 16-bit real mode  
+- BIOS loads the first 512 bytes (bootloader) into memory at `0x7C00` and jumps there  
+- The bootloader:
+  - Initializes segments and stack
+  - Loads kernel sectors (starting at sector 2) into memory at `0x0800` using BIOS interrupt `13h`
+  - Performs a far jump to `0x0000:0800` to start executing the kernel
+
+---
+
+### Protected Mode Setup
+
+- The kernel starts in real mode at `0x0800`
+- Disables interrupts (`CLI`)
+- Loads the Global Descriptor Table (GDT) with:
+  - Entry 0: null
+  - Entry 1: 32-bit code segment (selector `0x08`)
+  - Entry 2: 32-bit data/stack segment (selector `0x10`)
+- Sets the PE (Protection Enable) bit in `CR0`
+- Executes a far jump to `0x08:protected_start` to enter full 32-bit mode
+
+---
+
+### Kernel Initialization
+
+- Sets segment registers `DS`, `SS`, etc. to `0x10` (data segment)
+- Sets `ESP` to `0x9FC00` (kernel stack)
+- Calls `kmain()` (now in 32-bit C)
+
+---
+
+### kmain() Performs
+
+- Initializes in-memory file system (`fs[]`)
+- Prints welcome message
+- Creates the shell task using `task_create(shell, sh_stack, size)`
+- Calls `ctx_switch()` to jump to the shell task
+
+---
+
+### Task Management
+
+- Each task has its own static stack and entry function
+- `task_create()` sets up a fake stack:
+  - Pushes the app function as the return address
+  - Pushes `0`s for `EBP`, `EBX`, `ESI`, `EDI` (callee-saved registers)
+  - Saves the stack pointer to `tasks[i].sp`
+
+---
+
+### Context Switching (`ctx_switch.asm`)
+
+- Saves current task’s registers (`push ebp`, `ebx`, `esi`, `edi`)
+- Saves `ESP` to the old task’s `sp`
+- Loads new task’s `ESP`
+- Pops new task’s registers (`pop edi`, `esi`, `ebx`, `ebp`)
+- `RET`: jumps into the new task (starts running)
+
+---
+
+### Scheduler (`yield`)
+
+- Round-robin, cooperative scheduler
+- Picks next task in `tasks[]` that has a non-`NULL` stack
+- If found, updates `cur` index and calls `ctx_switch()`
+- Tasks must call `sys_yield()` voluntarily to allow switching
+
+---
+
+### Shell Task
+
+- Displays `sh>` prompt
+- Accepts commands like:
+  - `calc` → launches calculator app
+  - `edit` → launches editor app
+  - `help`, `clear`, etc.
+- Each app is started using `task_create()` and gets its own stack
+
+---
+
+### App Example: `app_edit()` (Editor)
+
+- CLI-based editor with commands:
+  - `new <file>`: creates a file buffer
+  - `open <file>`: loads file content from `fs[]`
+  - `edit`: enters live typing mode (ESC to exit)
+  - `save [file]`: saves buffer to virtual file system
+  - `list`: lists all virtual files
+  - `delete <file>`: removes file from memory
+  - `quit`: exits the task
+
+---
+
+### In-Memory File System
+
+- Uses a global array `fs[]` of file structs:
+  - Each file has a name, data buffer, size, and `in_use` flag
+- Accessed using system calls:
+  - `sys_write_file(filename, buffer, size)`
+  - `sys_read_file(filename, buffer, max_size)`
+  - `sys_delete_file(filename)`
+  - `sys_list_files(output_buffer, max_len)`
+- No disk persistence — files are stored only in RAM
+
+---
+
+### System Calls Summary
+
+- `sys_write(str)`: prints to screen
+- `sys_getc()`: reads one key
+- `sys_yield()`: triggers task switch
+- `sys_exit_task()`: terminates current task
+- `sys_read_file()`, `sys_write_file()`, etc.: access virtual file system
+
+---
+
+### Memory Model
+
+- Flat 32-bit addressing
+- No paging or virtual memory yet
+- Each task has a separate stack
+- Code and data are shared globally (no user/kernel separation)
+
+---
+
+
 ## Features
 
 -   **Bootloader (`bootloader.asm`)**:
