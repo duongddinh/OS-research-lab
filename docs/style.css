@@ -1,0 +1,154 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    line-height: 1.6;
+    margin: 0 auto;
+    padding: 20px;
+    max-width: 800px;
+    color: #333;
+    scroll-behavior: smooth; /* Smooth scroll for anchor links */
+}
+
+nav.main-nav {
+    background-color: #f4f4f4;
+    padding: 10px 0;
+    margin-bottom: 20px;
+    text-align: center;
+    border-radius: 5px;
+    position: sticky; /* Keep nav visible */
+    top: 0;
+    z-index: 10;
+}
+
+nav.main-nav a {
+    margin: 0 15px;
+    text-decoration: none;
+    color: #0366d6;
+    font-weight: bold;
+}
+
+nav.main-nav a:hover {
+    text-decoration: underline;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #111;
+}
+
+h1 { font-size: 2em; }
+h2 {
+    font-size: 1.75em;
+    border-bottom: 2px solid #ccc; /* Make section headers more prominent */
+    padding-bottom: 0.3em;
+    margin-top: 2em; /* More space between sections */
+    scroll-margin-top: 70px; /* Offset for sticky nav */
+}
+h3 { font-size: 1.25em; border-bottom: 1px solid #eee; padding-bottom: 0.2em; margin-top: 1.5em;}
+h4 { font-size: 1.1em; }
+
+
+p {
+    margin-bottom: 1em;
+}
+
+ul, ol {
+    margin-bottom: 1em;
+    padding-left: 20px;
+}
+
+li {
+    margin-bottom: 0.5em;
+}
+
+pre {
+    background-color: #f6f8fa;
+    border-radius: 3px;
+    font-size: 85%;
+    line-height: 1.45;
+    overflow: auto;
+    padding: 16px;
+    margin-bottom: 1em;
+    border: 1px solid #eaecef;
+}
+
+code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    background-color: rgba(27,31,35,0.05);
+    padding: 0.2em 0.4em;
+    margin: 0;
+    font-size: 85%;
+    border-radius: 3px;
+}
+
+pre > code {
+    padding: 0;
+    margin: 0;
+    font-size: 100%;
+    word-break: normal;
+    white-space: pre;
+    background: transparent;
+    border: 0;
+}
+
+table {
+    border-collapse: collapse;
+    margin-bottom: 1em;
+    width: 100%;
+    border: 1px solid #dfe2e5;
+}
+
+th, td {
+    border: 1px solid #dfe2e5;
+    padding: 8px 12px;
+    text-align: left;
+}
+
+th {
+    background-color: #f6f8fa;
+    font-weight: bold;
+}
+
+tr:nth-child(even) {
+    background-color: #f6f8fa;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1em auto; /* Center images */
+    border: 1px solid #ddd; /* Optional: add a light border */
+    border-radius: 4px;
+}
+
+blockquote {
+    border-left: 4px solid #dfe2e5;
+    padding-left: 1em;
+    color: #6a737d;
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 1em;
+}
+
+hr {
+    height: 0.25em;
+    padding: 0;
+    margin: 24px 0;
+    background-color: #e1e4e8;
+    border: 0;
+}
+
+section { /* Add some padding to sections */
+    padding-top: 10px;
+}
+
+/* Footer styling - optional */
+footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    font-size: 0.9em;
+    color: #666;
+    text-align: center;
+}
