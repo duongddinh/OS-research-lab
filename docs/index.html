@@ -14,404 +14,379 @@
       <a href="#jordyos">jordyOS</a>
     </nav>
 
-    <section id="home">
-        <h1>OS Research Lab</h1>
+    <div class="content-wrapper">
+        <section id="home">
+            <h1>OS Research Lab</h1>
 
-        <p>Exploring kernel-level operating system design through simulation and machine learning. Focused on schedulers, memory management, and early experiments toward building a custom OS.</p>
+            <p>Exploring kernel-level operating system design through simulation and machine learning. Focused on schedulers, memory management, and early experiments toward building a custom OS.</p>
 
-        <p>This is an <strong>ongoing research and learning project</strong>, where I explore fundamental OS concepts through simulation, implement new ideas, and eventually work toward building a simple, custom operating system.</p>
+            <p>This is an <strong>ongoing research and learning project</strong>, where I explore fundamental OS concepts through simulation, implement new ideas, and eventually work toward building a simple, custom operating system.</p>
 
-        <hr>
+            <hr>
 
-        <h2>Why This Exists</h2>
+            <h2>Why This Exists</h2>
 
-        <p>Most OS behavior lives deep in the kernel — but textbooks often leave no room to experiment. This repo is my hands-on lab for:</p>
-        <ul>
-            <li>Simulating and testing OS concepts before writing bare-metal C/ASM</li>
-            <li>Exploring the boundary between <strong>traditional kernel logic</strong> and <strong>machine learning</strong></li>
-            <li>Gradually building toward a minimal, bootable operating system</li>
-        </ul>
+            <p>Most OS behavior lives deep in the kernel — but textbooks often leave no room to experiment. This repo is my hands-on lab for:</p>
+            <ul>
+                <li>Simulating and testing OS concepts before writing bare-metal C/ASM</li>
+                <li>Exploring the boundary between <strong>traditional kernel logic</strong> and <strong>machine learning</strong></li>
+                <li>Gradually building toward a minimal, bootable operating system</li>
+            </ul>
 
-        <hr>
+            <hr>
 
-        <h2>Focus Areas Overview</h2>
-        <p>This page details the different areas of the project:</p>
-        <ul>
-            <li><a href="#cpu">CPU Scheduling Simulations</a></li>
-            <li><a href="#memory">Memory Management Experiments</a></li>
-            <li>ML in the Kernel Concepts</li>
-            <li><a href="#jordyos">jordyOS (WIP Custom OS)</a></li>
-        </ul>
+            <h2>Focus Areas Overview</h2>
+            <p>This page details the different areas of the project:</p>
+            <ul>
+                <li><a href="#cpu">CPU Scheduling Simulations</a></li>
+                <li><a href="#memory">Memory Management Experiments</a></li>
+                <li>ML in the Kernel Concepts</li>
+                <li><a href="#jordyos">jordyOS (WIP Custom OS)</a></li>
+            </ul>
 
+            <hr>
 
-        <hr>
-
-        <h2>Directory Structure (from Repository Root)</h2>
-        <p>The website files are hosted from the <code>/docs</code> folder, but the core project code resides at the repository root:</p>
-        <pre><code>cpu/        # Scheduling simulations and ML-enhanced RR
+            <h2>Directory Structure (from Repository Root)</h2>
+            <p>The website files are hosted from the <code>/docs</code> folder, but the core project code resides at the repository root:</p>
+            <pre><code>cpu/        # Scheduling simulations and ML-enhanced RR
 memory/     # Page replacement experiments (LRU, ML, etc.)
 jordyOS/    # Bootable toy operating system with calculator shell
 docs/       # Static website files (this page, CSS, copied images)
 ...         # Other project files</code></pre>
-
-    </section>
-
-
-    <section id="cpu">
-        <h2>CPU Scheduling Research</h2>
-
-        <p>Simulations of traditional and modern CPU scheduling strategies, including:</p>
-        <ul>
-            <li>Round-Robin</li>
-            <li>CFS (Linux’s Completely Fair Scheduler)</li>
-            <li>ML-augmented RR (shortest-job prediction and dynamic quantum adjustment)</li>
-        </ul>
-
-        <hr>
-
-        <h3>ML-Augmented CPU Scheduling: RR vs CFS</h3>
-
-        <p>Following explorations in ML-enhanced LRU, this section details an experiment exploring:</p>
-        <blockquote>What if we applied machine learning inside the CPU scheduler?</blockquote>
-
-        <p>A Python simulation was built and fed two classic workloads to test how ML-enhanced Round-Robin scheduling compares to the Linux default, CFS.</p>
-
-
-        <h3>Workloads</h3>
-        <ul>
-            <li><strong>Bursty</strong>: 90% micro-tasks, 10% long scans</li>
-            <li><strong>Heavy-tail</strong>: thousands of short jobs, a few extremely long ones</li>
-        </ul>
-
-
-        <h3>Schedulers Compared</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Scheduler</th>
-              <th>Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>CFS</strong></td>
-              <td>Linux default — picks the task with the least CPU time so far (fair-share), auto-shrinks time slices as the queue grows</td>
-            </tr>
-            <tr>
-              <td><strong>Round-Robin (RR)</strong></td>
-              <td>First-in, first-out with fixed time slices (tested q = 5, 10, 20)</td>
-            </tr>
-            <tr>
-              <td><strong>RR + ML</strong></td>
-              <td>Uses an online classifier to move likely-to-finish tasks to the front of the queue</td>
-            </tr>
-            <tr>
-              <td><strong>RR + 2×ML</strong></td>
-              <td>Adds a regressor that predicts task duration and adjusts quantum on the fly (between 2–20 ms)</td>
-            </tr>
-          </tbody>
-        </table>
-
-
-        <h3>Results</h3>
-
-        <h4>Bursty Workload (Lower is Better)</h4>
-        <img src="assets/images/cpu/cpu1.png" alt="Bursty Workload Scheduler Comparison">
-
-        <h4>Heavy Workload (Lower is Better)</h4>
-        <img src="assets/images/cpu/cpu2.png" alt="Heavy Workload Scheduler Comparison">
-
-        <h4>Bursty Workload — RR vs 2 x ML</h4>
-        <img src="assets/images/cpu/cpu3.png" alt="Bursty Workload RR vs 2xML Comparison">
-
-        <h4>Heavy Workload — RR vs 2 x ML</h4>
-        <img src="assets/images/cpu/cpu4.png" alt="Heavy Workload RR vs 2xML Comparison">
-
-
-        <h3>Takeaways</h3>
-
-        <h4>Bursty Workload:</h4>
-        <ul>
-            <li><strong>CFS</strong> had the lowest average and best tail latency — fairness pays off.</li>
-            <li><strong>RR + ML</strong> improved turnaround by prioritizing short tasks.</li>
-            <li><strong>RR + 2×ML</strong> added too many context switches when mispredicting large scans → performance dropped.</li>
-        </ul>
-
-        <h4>Heavy Workload:</h4>
-        <ul>
-            <li><strong>RR + ML</strong> shaved off <strong>10–15%</strong> in average turnaround (95% of jobs fit in one slice).</li>
-            <li><strong>RR + 2×ML</strong> added ~3% more improvement, but still suffered on the monster jobs.</li>
-            <li><strong>CFS</strong> came third, mainly because it insists on fairness — even for long tasks.</li>
-        </ul>
-
-
-        <h3>Final Lessons</h3>
-        <ul>
-            <li><strong>CFS’s <code>vruntime</code> is brilliant</strong> — near SJF performance, yet starvation-proof.</li>
-            <li><strong>ML helps when short tasks dominate</strong> (e.g., API gateways, GPU micro-batching).</li>
-            <li><strong>ML-based quantum tuning looks cool on paper</strong>, but often <strong>costs more than it saves</strong>:
-              <ul>
-                  <li>More context switches</li>
-                  <li>More tuning knobs</li>
-                  <li>Harder to debug</li>
-              </ul>
-            </li>
-        </ul>
-        <blockquote>Also: Classic Round-Robin doesn’t guard against starvation and is easily exploited.<br><strong>CFS is extremely well-designed — a solid default.</strong></blockquote>
-    </section>
-
-
-    <section id="memory">
-        <h2>Memory Management Research</h2>
-
-        <p>Page replacement experiments using various eviction policies:</p>
-        <ul>
-            <li>Classic LRU, FIFO, Random</li>
-            <li>Machine learning–enhanced LRU</li>
-        </ul>
-
-        <hr>
-
-        <h3>ML-Augmented LRU vs Traditional Page Replacement Strategies</h3>
-
-        <p>While working with virtual memory systems, the question arose:</p>
-        <blockquote>Could a lightweight machine learning model actually out-evict traditional strategies like LRU?</blockquote>
-
-        <p>With the rise of ML, it seemed natural to explore smarter page eviction based on historical access patterns. This simulation compares four classic cache replacement policies.</p>
-
-
-        <h3>Policies Tested</h3>
-        <ul>
-            <li><strong>LRU</strong> – Least Recently Used (standard OS heuristic)</li>
-            <li><strong>FIFO</strong> – First-In, First-Out</li>
-            <li><strong>Random</strong> – Random eviction</li>
-            <li><strong>ML</strong> – A logistic regression model predicting whether a page will be reused soon, based on:
-              <ul>
-                  <li>Long-term frequency</li>
-                  <li>Recent recency</li>
-              </ul>
-            </li>
-        </ul>
-
-
-        <h3>Simulation Setup</h3>
-        <ul>
-            <li><strong>Trace size</strong>: 1,000,000 memory accesses</li>
-            <li><strong>Cache sizes</strong>: 64, 128, 256, 512 entries</li>
-            <li><strong>Metric</strong>: Total number of cache hits and misses</li>
-        </ul>
-
-
-        <h3>Results</h3>
-
-        <h4>Cache Size: 64</h4>
-        <img src="assets/images/memory/Figure_1.png" alt="Cache Size 64 Comparison">
-
-        <h4>Cache Size: 128</h4>
-        <img src="assets/images/memory/Figure_2.png" alt="Cache Size 128 Comparison">
-
-        <h4>Cache Size: 256</h4>
-        <img src="assets/images/memory/Figure_3.png" alt="Cache Size 256 Comparison">
-
-        <h4>Cache Size: 512</h4>
-        <img src="assets/images/memory/Figure_4.png" alt="Cache Size 512 Comparison">
-
-        <h4>Hit Rate Comparison Summary</h4>
-        <img src="assets/images/memory/Figure_5.png" alt="Hit Rate Summary Across Cache Sizes">
-
-
-        <h3>Key Observations</h3>
-        <ul>
-            <li>At <strong>tight cache sizes</strong>, ML <strong>outperformed LRU</strong> (e.g., 48% vs 41% hit rate at size 64).</li>
-            <li>As cache size increased, the gap <strong>narrowed or reversed</strong>.</li>
-            <li>With <strong>generous cache sizes</strong>, traditional policies like FIFO and even Random began to edge out ML.</li>
-        </ul>
-
-
-        <h3>Takeaways (from an OS Perspective)</h3>
-        <ul>
-            <li>For <strong>general-purpose page caches</strong>, ML does not offer consistent enough gains to justify the:
-              <ul>
-                  <li>Complexity</li>
-                  <li>Latency risks</li>
-                  <li>Maintenance cost</li>
-              </ul>
-            </li>
-            <li>ML strategies <strong>work best in constrained environments</strong> with:
-              <ul>
-                  <li>Predictable access patterns</li>
-                  <li>Tight cache budgets</li>
-              </ul>
-            </li>
-            <li>In <strong>specialized layers</strong> (e.g., CDN edges, VM hypervisors, database page buffers), the tradeoffs are already practical — and <strong>production ML-augmented policies do exist</strong>.</li>
-        </ul>
-
-
-        <h3>Limitations</h3>
-        <ul>
-            <li>This experiment used <strong>synthetic workloads</strong> and <strong>offline-trained models</strong>.</li>
-            <li>The trace was <strong>intentionally harsh</strong> (low reuse rate).</li>
-            <li>In more dynamic real-world systems, <strong>model drift</strong> could cause ML predictions to hurt performance.</li>
-        </ul>
-
-
-        <h3>Final Thought</h3>
-        <blockquote>A model trained on yesterday’s access pattern can become obsolete the moment the user opens a different app.<br>Without a dominant reuse pattern, ML rarely beats a robust LRU.</blockquote>
-    </section>
-
-
-    <section id="jordyos">
-        <h2>jordyOS (Work In Progress)</h2>
-
-        <p><code>jordyOS</code> is a minimal, bootable hobbyist operating system built from scratch, featuring a command-line shell, a calculator application, and a text editor with in-memory file support.</p>
-
-        <p>It’s written in <strong>x86 Assembly</strong> and <strong>C</strong>, and is built with an i686-elf cross-compiler toolchain. The OS runs in <strong>16-bit real mode</strong> initially (via the bootloader), then switches to <strong>32-bit protected mode</strong> where it executes a multitasking kernel.</p>
-
-        <hr>
-
-        <h3>High Level System Design</h3>
-         <img src="assets/images/jordyos/IMG_5794.png" alt="jordyOS System Design Diagram">
-
-        <ul>
-            <li><strong>System Name:</strong> jordyOS</li>
-            <li><strong>Type:</strong> 32-bit x86 protected-mode kernel</li>
-            <li><strong>Architecture:</strong> Cooperative multitasking with an in-memory file system</li>
-        </ul>
-
-        <hr>
-
-        <h3>Boot Process</h3>
-        <ol>
-            <li>System powers on, BIOS runs in 16-bit real mode.</li>
-            <li>BIOS loads the first 512 bytes (bootloader) into memory at <code>0x7C00</code> and jumps there.</li>
-            <li>The bootloader:
-              <ul>
-                  <li>Initializes segments and stack.</li>
-                  <li>Loads kernel sectors (starting at sector 2) into memory at <code>0x0800</code> using BIOS interrupt <code>13h</code>.</li>
-                  <li>Performs a far jump to <code>0x0000:0800</code> to start executing the kernel.</li>
-              </ul>
-            </li>
-        </ol>
-
-
-        <h3>Protected Mode Setup</h3>
-        <ol>
-            <li>The kernel starts in real mode at <code>0x0800</code>.</li>
-            <li>Disables interrupts (<code>CLI</code>).</li>
-            <li>Loads the Global Descriptor Table (GDT) with entries for null, 32-bit code (<code>0x08</code>), and 32-bit data/stack (<code>0x10</code>).</li>
-            <li>Sets the PE (Protection Enable) bit in <code>CR0</code>.</li>
-            <li>Executes a far jump to <code>0x08:protected_start</code> to enter full 32-bit mode.</li>
-        </ol>
-
-
-        <h3>Kernel Initialization</h3>
-        <ol>
-            <li>Sets segment registers <code>DS</code>, <code>SS</code>, etc. to <code>0x10</code> (data segment).</li>
-            <li>Sets <code>ESP</code> to <code>0x9FC00</code> (kernel stack).</li>
-            <li>Calls <code>kmain()</code> (now in 32-bit C).</li>
-        </ol>
-
-
-        <h3><code>kmain()</code> Performs</h3>
-        <ol>
-            <li>Initializes in-memory file system (<code>fs[]</code>).</li>
-            <li>Prints welcome message.</li>
-            <li>Creates the shell task using <code>task_create(shell, sh_stack, size)</code>.</li>
-            <li>Calls <code>ctx_switch()</code> to jump to the shell task.</li>
-        </ol>
-
-
-        <h3>Task Management & Context Switching</h3>
-        <ul>
-            <li>Each task has its own static stack and entry function.</li>
-            <li><code>task_create()</code> sets up a fake stack frame for the new task.</li>
-            <li><code>ctx_switch.asm</code>:
-                <ul>
-                    <li>Saves the current task's registers (<code>EBP</code>, <code>EBX</code>, <code>ESI</code>, <code>EDI</code>) and <code>ESP</code>.</li>
-                    <li>Loads the new task's <code>ESP</code>.</li>
-                    <li>Pops the new task's saved registers.</li>
-                    <li><code>RET</code> instruction jumps to the new task's entry point (or where it left off).</li>
-                </ul>
-            </li>
-        </ul>
-
-
-        <h3>Scheduler (<code>yield</code>)</h3>
-        <ul>
-            <li>Round-robin, cooperative scheduler.</li>
-            <li>Picks the next task in the <code>tasks[]</code> array that is ready to run.</li>
-            <li>Tasks must call <code>sys_yield()</code> voluntarily to allow other tasks to run.</li>
-        </ul>
-
-
-        <h3>Shell Task (<code>sh></code>)</h3>
-        <ul>
-            <li>Displays prompt and accepts commands like <code>calc</code>, <code>edit</code>, <code>help</code>, <code>clear</code>.</li>
-            <li>Launches applications using <code>task_create()</code>.</li>
-        </ul>
-
-
-        <h3>Applications & Features</h3>
-
-        <h4>Features Overview</h4>
-        <ul>
-            <li><strong>Bootloader (<code>bootloader.asm</code>)</strong>: Sets up real mode, loads kernel, transitions to 32-bit protected mode.</li>
-            <li><strong>Kernel (<code>kernel.c</code>, <code>kernel_entry.asm</code>, <code>ctx_switch.asm</code>)</strong>:
-                <ul>
-                    <li>VGA Text Mode Output</li>
-                    <li>Polling Keyboard Input</li>
-                    <li>Cooperative Multitasking</li>
-                    <li>System Calls (Console I/O, Task Management, Screen, In-Memory File Ops)</li>
-                </ul>
-            </li>
-            <li><strong>Shell (<code>sh></code>)</strong>: Command-line interface with built-in commands (<code>calc</code>, <code>edit</code>, <code>clear</code>, <code>help</code>).</li>
-            <li><strong>Applications</strong>: <code>app_calc</code> (basic arithmetic) and <code>app_edit</code> (text editor).</li>
-        </ul>
-
-        <h4><code>app_edit</code> (Text Editor) Details</h4>
-        <ul>
-            <li>Command-driven interface (<code>edit#</code>).</li>
-            <li><strong>In-Memory File System</strong>:
-                <ul>
-                    <li><code>new &lt;filename&gt;</code>: Create file buffer.</li>
-                    <li><code>open &lt;filename&gt;</code>: Load from <code>fs[]</code>.</li>
-                    <li><code>save [filename]</code>: Save buffer to <code>fs[]</code>.</li>
-                    <li><code>list</code>: List files in <code>fs[]</code>.</li>
-                    <li><code>delete &lt;filename&gt;</code>: Remove file from <code>fs[]</code>.</li>
-                </ul>
-            </li>
-            <li><strong>Text Input Mode</strong>: Via <code>edit</code> command (within <code>app_edit</code>), exit with <code>ESC</code>.</li>
-            <li><code>quit</code>: Exit editor task.</li>
-        </ul>
-
-        <h4>In-Memory File System</h4>
-        <ul>
-            <li>Uses a global array <code>fs[]</code> of file structs (name, data buffer, size, <code>in_use</code> flag).</li>
-            <li>Accessed via system calls (<code>sys_write_file</code>, <code>sys_read_file</code>, etc.).</li>
-            <li>No disk persistence – files exist only in RAM during runtime.</li>
-        </ul>
-
-        <h4>System Calls Summary</h4>
-        <ul>
-            <li><code>sys_write(str)</code>: Print to screen.</li>
-            <li><code>sys_getc()</code>: Read one key.</li>
-            <li><code>sys_yield()</code>: Trigger task switch.</li>
-            <li><code>sys_exit_task()</code>: Terminate current task.</li>
-            <li><code>sys_read_file()</code>, <code>sys_write_file()</code>, <code>sys_delete_file()</code>, <code>sys_list_files()</code>: Access virtual file system.</li>
-        </ul>
-
-
-        <h3>Memory Model</h3>
-        <ul>
-            <li>Flat 32-bit addressing.</li>
-            <li>No paging or virtual memory.</li>
-            <li>Separate stack per task.</li>
-            <li>Code and data are shared globally (no user/kernel separation).</li>
-        </ul>
-
-
-        <h3>Example Usage</h3>
-        <pre><code>jordyOS multitask w/ In-Memory FS
+        </section>
+
+        <section id="cpu">
+            <h2>CPU Scheduling Research</h2>
+
+            <p>Simulations of traditional and modern CPU scheduling strategies, including:</p>
+            <ul>
+                <li>Round-Robin</li>
+                <li>CFS (Linux’s Completely Fair Scheduler)</li>
+                <li>ML-augmented RR (shortest-job prediction and dynamic quantum adjustment)</li>
+            </ul>
+
+            <hr>
+
+            <h3>ML-Augmented CPU Scheduling: RR vs CFS</h3>
+
+            <p>Following explorations in ML-enhanced LRU, this section details an experiment exploring:</p>
+            <blockquote>What if we applied machine learning inside the CPU scheduler?</blockquote>
+
+            <p>A Python simulation was built and fed two classic workloads to test how ML-enhanced Round-Robin scheduling compares to the Linux default, CFS.</p>
+
+            <h3>Workloads</h3>
+            <ul>
+                <li><strong>Bursty</strong>: 90% micro-tasks, 10% long scans</li>
+                <li><strong>Heavy-tail</strong>: thousands of short jobs, a few extremely long ones</li>
+            </ul>
+
+            <h3>Schedulers Compared</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Scheduler</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>CFS</strong></td>
+                  <td>Linux default — picks the task with the least CPU time so far (fair-share), auto-shrinks time slices as the queue grows</td>
+                </tr>
+                <tr>
+                  <td><strong>Round-Robin (RR)</strong></td>
+                  <td>First-in, first-out with fixed time slices (tested q = 5, 10, 20)</td>
+                </tr>
+                <tr>
+                  <td><strong>RR + ML</strong></td>
+                  <td>Uses an online classifier to move likely-to-finish tasks to the front of the queue</td>
+                </tr>
+                <tr>
+                  <td><strong>RR + 2×ML</strong></td>
+                  <td>Adds a regressor that predicts task duration and adjusts quantum on the fly (between 2–20 ms)</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3>Results</h3>
+
+            <h4>Bursty Workload (Lower is Better)</h4>
+            <img src="assets/images/cpu/cpu1.png" alt="Bursty Workload Scheduler Comparison">
+
+            <h4>Heavy Workload (Lower is Better)</h4>
+            <img src="assets/images/cpu/cpu2.png" alt="Heavy Workload Scheduler Comparison">
+
+            <h4>Bursty Workload — RR vs 2 x ML</h4>
+            <img src="assets/images/cpu/cpu3.png" alt="Bursty Workload RR vs 2xML Comparison">
+
+            <h4>Heavy Workload — RR vs 2 x ML</h4>
+            <img src="assets/images/cpu/cpu4.png" alt="Heavy Workload RR vs 2xML Comparison">
+
+            <h3>Takeaways</h3>
+
+            <h4>Bursty Workload:</h4>
+            <ul>
+                <li><strong>CFS</strong> had the lowest average and best tail latency — fairness pays off.</li>
+                <li><strong>RR + ML</strong> improved turnaround by prioritizing short tasks.</li>
+                <li><strong>RR + 2×ML</strong> added too many context switches when mispredicting large scans → performance dropped.</li>
+            </ul>
+
+            <h4>Heavy Workload:</h4>
+            <ul>
+                <li><strong>RR + ML</strong> shaved off <strong>10–15%</strong> in average turnaround (95% of jobs fit in one slice).</li>
+                <li><strong>RR + 2×ML</strong> added ~3% more improvement, but still suffered on the monster jobs.</li>
+                <li><strong>CFS</strong> came third, mainly because it insists on fairness — even for long tasks.</li>
+            </ul>
+
+            <h3>Final Lessons</h3>
+            <ul>
+                <li><strong>CFS’s <code>vruntime</code> is brilliant</strong> — near SJF performance, yet starvation-proof.</li>
+                <li><strong>ML helps when short tasks dominate</strong> (e.g., API gateways, GPU micro-batching).</li>
+                <li><strong>ML-based quantum tuning looks cool on paper</strong>, but often <strong>costs more than it saves</strong>:
+                  <ul>
+                      <li>More context switches</li>
+                      <li>More tuning knobs</li>
+                      <li>Harder to debug</li>
+                  </ul>
+                </li>
+            </ul>
+            <blockquote>Also: Classic Round-Robin doesn’t guard against starvation and is easily exploited.<br><strong>CFS is extremely well-designed — a solid default.</strong></blockquote>
+        </section>
+
+        <section id="memory">
+            <h2>Memory Management Research</h2>
+
+            <p>Page replacement experiments using various eviction policies:</p>
+            <ul>
+                <li>Classic LRU, FIFO, Random</li>
+                <li>Machine learning–enhanced LRU</li>
+            </ul>
+
+            <hr>
+
+            <h3>ML-Augmented LRU vs Traditional Page Replacement Strategies</h3>
+
+            <p>While working with virtual memory systems, the question arose:</p>
+            <blockquote>Could a lightweight machine learning model actually out-evict traditional strategies like LRU?</blockquote>
+
+            <p>With the rise of ML, it seemed natural to explore smarter page eviction based on historical access patterns. This simulation compares four classic cache replacement policies.</p>
+
+            <h3>Policies Tested</h3>
+            <ul>
+                <li><strong>LRU</strong> – Least Recently Used (standard OS heuristic)</li>
+                <li><strong>FIFO</strong> – First-In, First-Out</li>
+                <li><strong>Random</strong> – Random eviction</li>
+                <li><strong>ML</strong> – A logistic regression model predicting whether a page will be reused soon, based on:
+                  <ul>
+                      <li>Long-term frequency</li>
+                      <li>Recent recency</li>
+                  </ul>
+                </li>
+            </ul>
+
+            <h3>Simulation Setup</h3>
+            <ul>
+                <li><strong>Trace size</strong>: 1,000,000 memory accesses</li>
+                <li><strong>Cache sizes</strong>: 64, 128, 256, 512 entries</li>
+                <li><strong>Metric</strong>: Total number of cache hits and misses</li>
+            </ul>
+
+            <h3>Results</h3>
+
+            <h4>Cache Size: 64</h4>
+            <img src="assets/images/memory/Figure_1.png" alt="Cache Size 64 Comparison">
+
+            <h4>Cache Size: 128</h4>
+            <img src="assets/images/memory/Figure_2.png" alt="Cache Size 128 Comparison">
+
+            <h4>Cache Size: 256</h4>
+            <img src="assets/images/memory/Figure_3.png" alt="Cache Size 256 Comparison">
+
+            <h4>Cache Size: 512</h4>
+            <img src="assets/images/memory/Figure_4.png" alt="Cache Size 512 Comparison">
+
+            <h4>Hit Rate Comparison Summary</h4>
+            <img src="assets/images/memory/Figure_5.png" alt="Hit Rate Summary Across Cache Sizes">
+
+            <h3>Key Observations</h3>
+            <ul>
+                <li>At <strong>tight cache sizes</strong>, ML <strong>outperformed LRU</strong> (e.g., 48% vs 41% hit rate at size 64).</li>
+                <li>As cache size increased, the gap <strong>narrowed or reversed</strong>.</li>
+                <li>With <strong>generous cache sizes</strong>, traditional policies like FIFO and even Random began to edge out ML.</li>
+            </ul>
+
+            <h3>Takeaways (from an OS Perspective)</h3>
+            <ul>
+                <li>For <strong>general-purpose page caches</strong>, ML does not offer consistent enough gains to justify the:
+                  <ul>
+                      <li>Complexity</li>
+                      <li>Latency risks</li>
+                      <li>Maintenance cost</li>
+                  </ul>
+                </li>
+                <li>ML strategies <strong>work best in constrained environments</strong> with:
+                  <ul>
+                      <li>Predictable access patterns</li>
+                      <li>Tight cache budgets</li>
+                  </ul>
+                </li>
+                <li>In <strong>specialized layers</strong> (e.g., CDN edges, VM hypervisors, database page buffers), the tradeoffs are already practical — and <strong>production ML-augmented policies do exist</strong>.</li>
+            </ul>
+
+            <h3>Limitations</h3>
+            <ul>
+                <li>This experiment used <strong>synthetic workloads</strong> and <strong>offline-trained models</strong>.</li>
+                <li>The trace was <strong>intentionally harsh</strong> (low reuse rate).</li>
+                <li>In more dynamic real-world systems, <strong>model drift</strong> could cause ML predictions to hurt performance.</li>
+            </ul>
+
+            <h3>Final Thought</h3>
+            <blockquote>A model trained on yesterday’s access pattern can become obsolete the moment the user opens a different app.<br>Without a dominant reuse pattern, ML rarely beats a robust LRU.</blockquote>
+        </section>
+
+        <section id="jordyos">
+            <h2>jordyOS (Work In Progress)</h2>
+
+            <p><code>jordyOS</code> is a minimal, bootable hobbyist operating system built from scratch, featuring a command-line shell, a calculator application, and a text editor with in-memory file support.</p>
+
+            <p>It’s written in <strong>x86 Assembly</strong> and <strong>C</strong>, and is built with an i686-elf cross-compiler toolchain. The OS runs in <strong>16-bit real mode</strong> initially (via the bootloader), then switches to <strong>32-bit protected mode</strong> where it executes a multitasking kernel.</p>
+
+            <hr>
+
+            <h3>High Level System Design</h3>
+            <img src="assets/images/jordyos/IMG_5794.png" alt="jordyOS System Design Diagram">
+
+            <ul>
+                <li><strong>System Name:</strong> jordyOS</li>
+                <li><strong>Type:</strong> 32-bit x86 protected-mode kernel</li>
+                <li><strong>Architecture:</strong> Cooperative multitasking with an in-memory file system</li>
+            </ul>
+
+            <hr>
+
+            <h3>Boot Process</h3>
+            <ol>
+                <li>System powers on, BIOS runs in 16-bit real mode.</li>
+                <li>BIOS loads the first 512 bytes (bootloader) into memory at <code>0x7C00</code> and jumps there.</li>
+                <li>The bootloader:
+                  <ul>
+                      <li>Initializes segments and stack.</li>
+                      <li>Loads kernel sectors (starting at sector 2) into memory at <code>0x0800</code> using BIOS interrupt <code>13h</code>.</li>
+                      <li>Performs a far jump to <code>0x0000:0800</code> to start executing the kernel.</li>
+                  </ul>
+                </li>
+            </ol>
+
+            <h3>Protected Mode Setup</h3>
+            <ol>
+                <li>The kernel starts in real mode at <code>0x0800</code>.</li>
+                <li>Disables interrupts (<code>CLI</code>).</li>
+                <li>Loads the Global Descriptor Table (GDT) with entries for null, 32-bit code (<code>0x08</code>), and 32-bit data/stack (<code>0x10</code>).</li>
+                <li>Sets the PE (Protection Enable) bit in <code>CR0</code>.</li>
+                <li>Executes a far jump to <code>0x08:protected_start</code> to enter full 32-bit mode.</li>
+            </ol>
+
+            <h3>Kernel Initialization</h3>
+            <ol>
+                <li>Sets segment registers <code>DS</code>, <code>SS</code>, etc. to <code>0x10</code> (data segment).</li>
+                <li>Sets <code>ESP</code> to <code>0x9FC00</code> (kernel stack).</li>
+                <li>Calls <code>kmain()</code> (now in 32-bit C).</li>
+            </ol>
+
+            <h3><code>kmain()</code> Performs</h3>
+            <ol>
+                <li>Initializes in-memory file system (<code>fs[]</code>).</li>
+                <li>Prints welcome message.</li>
+                <li>Creates the shell task using <code>task_create(shell, sh_stack, size)</code>.</li>
+                <li>Calls <code>ctx_switch()</code> to jump to the shell task.</li>
+            </ol>
+
+            <h3>Task Management & Context Switching</h3>
+            <ul>
+                <li>Each task has its own static stack and entry function.</li>
+                <li><code>task_create()</code> sets up a fake stack frame for the new task.</li>
+                <li><code>ctx_switch.asm</code>:
+                    <ul>
+                        <li>Saves the current task's registers (<code>EBP</code>, <code>EBX</code>, <code>ESI</code>, <code>EDI</code>) and <code>ESP</code>.</li>
+                        <li>Loads the new task's <code>ESP</code>.</li>
+                        <li>Pops the new task's saved registers.</li>
+                        <li><code>RET</code> instruction jumps to the new task's entry point (or where it left off).</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3>Scheduler (<code>yield</code>)</h3>
+            <ul>
+                <li>Round-robin, cooperative scheduler.</li>
+                <li>Picks the next task in the <code>tasks[]</code> array that is ready to run.</li>
+                <li>Tasks must call <code>sys_yield()</code> voluntarily to allow other tasks to run.</li>
+            </ul>
+
+            <h3>Shell Task (<code>sh></code>)</h3>
+            <ul>
+                <li>Displays prompt and accepts commands like <code>calc</code>, <code>edit</code>, <code>help</code>, <code>clear</code>.</li>
+                <li>Launches applications using <code>task_create()</code>.</li>
+            </ul>
+
+            <h3>Applications & Features</h3>
+
+            <h4>Features Overview</h4>
+            <ul>
+                <li><strong>Bootloader (<code>bootloader.asm</code>)</strong>: Sets up real mode, loads kernel, transitions to 32-bit protected mode.</li>
+                <li><strong>Kernel (<code>kernel.c</code>, <code>kernel_entry.asm</code>, <code>ctx_switch.asm</code>)</strong>:
+                    <ul>
+                        <li>VGA Text Mode Output</li>
+                        <li>Polling Keyboard Input</li>
+                        <li>Cooperative Multitasking</li>
+                        <li>System Calls (Console I/O, Task Management, Screen, In-Memory File Ops)</li>
+                    </ul>
+                </li>
+                <li><strong>Shell (<code>sh></code>)</strong>: Command-line interface with built-in commands (<code>calc</code>, <code>edit</code>, <code>clear</code>, <code>help</code>).</li>
+                <li><strong>Applications</strong>: <code>app_calc</code> (basic arithmetic) and <code>app_edit</code> (text editor).</li>
+            </ul>
+
+            <h4><code>app_edit</code> (Text Editor) Details</h4>
+            <ul>
+                <li>Command-driven interface (<code>edit#</code>).</li>
+                <li><strong>In-Memory File System</strong>:
+                    <ul>
+                        <li><code>new &lt;filename&gt;</code>: Create file buffer.</li>
+                        <li><code>open &lt;filename&gt;</code>: Load from <code>fs[]</code>.</li>
+                        <li><code>save [filename]</code>: Save buffer to <code>fs[]</code>.</li>
+                        <li><code>list</code>: List files in <code>fs[]</code>.</li>
+                        <li><code>delete &lt;filename&gt;</code>: Remove file from <code>fs[]</code>.</li>
+                    </ul>
+                </li>
+                <li><strong>Text Input Mode</strong>: Via <code>edit</code> command (within <code>app_edit</code>), exit with <code>ESC</code>.</li>
+                <li><code>quit</code>: Exit editor task.</li>
+            </ul>
+
+            <h4>In-Memory File System</h4>
+            <ul>
+                <li>Uses a global array <code>fs[]</code> of file structs (name, data buffer, size, <code>in_use</code> flag).</li>
+                <li>Accessed via system calls (<code>sys_write_file</code>, <code>sys_read_file</code>, etc.).</li>
+                <li>No disk persistence – files exist only in RAM during runtime.</li>
+            </ul>
+
+            <h4>System Calls Summary</h4>
+            <ul>
+                <li><code>sys_write(str)</code>: Print to screen.</li>
+                <li><code>sys_getc()</code>: Read one key.</li>
+                <li><code>sys_yield()</code>: Trigger task switch.</li>
+                <li><code>sys_exit_task()</code>: Terminate current task.</li>
+                <li><code>sys_read_file()</code>, <code>sys_write_file()</code>, <code>sys_delete_file()</code>, <code>sys_list_files()</code>: Access virtual file system.</li>
+            </ul>
+
+            <h3>Memory Model</h3>
+            <ul>
+                <li>Flat 32-bit addressing.</li>
+                <li>No paging or virtual memory.</li>
+                <li>Separate stack per task.</li>
+                <li>Code and data are shared globally (no user/kernel separation).</li>
+            </ul>
+
+            <h3>Example Usage</h3>
+            <pre><code>jordyOS multitask w/ In-Memory FS
 
 sh> help
 Available commands:
@@ -447,23 +422,21 @@ Exiting editor...
 
 sh> clear</code></pre>
 
+            <h3>Build and Run (Instructions from Repo)</h3>
 
-        <h3>Build and Run (Instructions from Repo)</h3>
-
-        <h4>Install Toolchain (macOS Example)</h4>
-        <pre><code>brew install cdrkit
+            <h4>Install Toolchain (macOS Example)</h4>
+            <pre><code>brew install cdrkit
 brew install cdrtools
 brew install i686-elf-binutils i686-elf-gcc
 brew install nasm qemu</code></pre>
 
-        <h4>Build and Run the OS</h4>
-        <pre><code>make
+            <h4>Build and Run the OS</h4>
+            <pre><code>make
 make run</code></pre>
-    </section>
-
-    <footer>
-        <p>Project source code available on <a href="https://github.com/<your-username>/OS-research-lab">GitHub</a>.</p>
-         <p>Site served via GitHub Pages from the /docs directory.</p>
+        </section>
+    </div> <footer>
+        <p>Project source code available on <a href="https://github.com/duongddinh/OS-research-lab">GitHub</a>.</p>
+        <p>Site served via GitHub Pages from the /docs directory.</p>
     </footer>
 
 </body>
