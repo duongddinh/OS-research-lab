@@ -23,7 +23,7 @@ The simulation evaluates three types of spinlocks:
 
 ### 2. Exponential Moving Average (EMA) Predictor
 Both AI spinlocks use an EMA to predict the next lock hold time. The prediction (`pred`) is updated after each observed hold time (`h`):
-$$ \text{pred}_{new} = \alpha \cdot h + (1 - \alpha) \cdot \text{pred}_{old} $$
+`pred_new = α · h + (1 - α) · pred_old`
 Where:
 * `pred_old` is the previous prediction.
 * `h` is the actual hold time just observed.
@@ -34,17 +34,18 @@ An initial prediction (`pred_initial`) is established by "warming up" the EMA on
 
 * **Normal Spinlock:**
     The cost is simply the actual hold time `h`.
-    $$ \text{Cost}_{\text{Normal}} = h $$
+  ` Cost_Normal = h`
+
 
 * **AI Spinlocks (Heuristic and Tuned):**
     Let `T` be the current spin threshold and `P` be the static penalty for yielding/misprediction.
     1.  If `pred <= T` (AI predicts a short hold):
         * If actual hold `h <= T` (lock acquired within threshold):
-            $$ \text{Cost}_{\text{AI}} = h $$
+           `Cost_AI = h`
         * If actual hold `h > T` (lock not acquired within threshold, AI gives up):
-            $$ \text{Cost}_{\text{AI}} = T + P $$
+         `Cost_AI = T + P`
     2.  If `pred > T` (AI predicts a long hold and decides to yield immediately):
-        $$ \text{Cost}_{\text{AI}} = P $$
+          `Cost_AI = P`
 
 ### 4. Parameter Configuration (Example from Simulation Run)
 * Smoothing Factor $\alpha = 0.1$
