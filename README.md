@@ -26,6 +26,15 @@ See: [`/memory/`](./memory)
 
 ---
 
+### Lock
+Normal Spinlock vs Predictive spinlock:
+- Normal Spinlock
+- "AI" spinlock
+
+See: [`/locks/`](./locks)
+
+---
+
 ### ML in the Kernel
 Early-stage research on using lightweight ML models to assist OS behavior:
 - Predict page reuse
@@ -62,5 +71,6 @@ This repo is my hands-on lab for:
 ```bash
 cpu/         # Scheduling simulations and ML-enhanced RR
 memory/      # Page replacement experiments (LRU, ML, etc.)
+locks/       # Lock experiements (Spinlock and predictive spinlock)
 jordyOS/     # Bootable toy operating system with calculator shell
 docs/        # Github pages 
