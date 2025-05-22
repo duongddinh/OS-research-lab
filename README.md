@@ -73,4 +73,3 @@ cpu/         # Scheduling simulations and ML-enhanced RR
 memory/      # Page replacement experiments (LRU, ML, etc.)
 locks/       # Lock experiements (Spinlock and predictive spinlock)
 jordyOS/     # Bootable toy operating system with calculator shell
-docs/        # Github pages 
