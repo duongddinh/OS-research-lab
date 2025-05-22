@@ -64,6 +64,5 @@ I built a Python simulation and fed it two classic workloads to test how ML-enha
   - More tuning knobs
   - Harder to debug
 
-> Also: Classic Round-Robin doesn’t guard against starvation and is easily exploited.  
 > **CFS is extremely well-designed — a solid default.**
 
