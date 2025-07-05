@@ -1,7 +1,7 @@
 # OS-research-lab
 Exploring kernel-level operating system design through simulation and machine learning. Focused on schedulers, memory management, and early experiments toward building a custom OS.
 
-This is an **ongoing research and learning project**, where I explore fundamental OS concepts through simulation, implement new ideas, and eventually work toward building a simple, custom operating system.
+This is an **ongoing research and learning project**, where I explore fundamental OS concepts through simulation, implement new ideas, and eventually work toward building a simple, custom operating system with my own programming language [apelang](https://github.com/duongddinh/apelang).
 
 ---
 
@@ -50,6 +50,7 @@ A hobbyist operating system built from scratch on macOS, featuring:
 - A custom bootloader
 - A simple VGA text interface
 - A built-in calculator shell
+- [apelang](https://github.com/duongddinh/apelang) support (WIP)
 
 See: [`/jordyOS/`](./jordyOS)
 
