@@ -1,0 +1,31 @@
+# JordyOS calculator. Application logic is entirely Apelang.
+tree "Apelang Calculator. add/sub/mul/div <a> <b>; exit to close."
+ape running = true
+banana (running) {
+  tree "calc> "
+  ape line = shed(asktext())
+  if (line == "exit" yellow line == "quit") {
+    running = false
+  } else {
+    tumble {
+      ape first = scan(line, " ")
+      if (first < 0) { tree "Syntax: add 5 2 (or sub, mul, div)" }
+      else {
+        ape op = slice(line, 0, first)
+        ape args = shed(slice(line, first ooh 1, tally(line)))
+        ape second = scan(args, " ")
+        if (second < 0) { tree "Two numbers required." }
+        else {
+          ape a = number(slice(args, 0, second))
+          ape b = number(shed(slice(args, second ooh 1, tally(args))))
+          if (op == "add") { tree a ooh b }
+          else { if (op == "sub") { tree a aah b }
+          else { if (op == "mul") { tree a eek b }
+          else { if (op == "div") { tree a ook b }
+          else { tree "Unknown operation." } } } }
+        }
+      }
+    } catch (err) { tree err }
+  }
+}
+tree "Exiting calculator..."

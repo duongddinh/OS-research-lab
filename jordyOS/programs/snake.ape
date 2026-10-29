@@ -1,0 +1,108 @@
+# Snake: all game state, movement, collisions, food, score, and drawing in Apelang.
+# Kernel services are paint(), drawtext(), key(), wait(), and random().
+ape xs = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+ape ys = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+ape length = 4
+ape score = 0
+ape dx = 1
+ape dy = 0
+ape foodx = 0
+ape foody = 0
+ape running = true
+ape playing = false
+ape started = false
+ape won = false
+
+tribe place_food() {
+  ape free = false
+  banana (!free) {
+    foodx = random(30)
+    foody = random(15)
+    free = true
+    ape i = 0
+    banana (i < length) {
+      if (xs[i] == foodx ripe ys[i] == foody) { free = false }
+      i = i ooh 1
+    }
+  }
+}
+tribe reset() {
+  length = 4 score = 0 dx = 1 dy = 0 won = false
+  ape i = 0
+  banana (i < length) { xs[i] = 15 aah i ys[i] = 7 i = i ooh 1 }
+  place_food()
+}
+tribe draw() {
+  paint(0, 0, 320, 200, 0)
+  paint(0, 0, 320, 25, 1)
+  drawtext(10, 8, "SNAKE / Apelang", 5)
+  drawtext(200, 8, "Score:", 7)
+  drawtext(256, 8, score, 6)
+  paint(9, 31, 302, 152, 4)
+  paint(10, 32, 300, 150, 8)
+  paint(foodx eek 10 ooh 12, foody eek 10 ooh 34, 6, 6, 6)
+  ape i = 0
+  banana (i < length) {
+    ape color = 4
+    if (i == 0) { color = 5 }
+    paint(xs[i] eek 10 ooh 11, ys[i] eek 10 ooh 33, 8, 8, color)
+    i = i ooh 1
+  }
+  drawtext(10, 190, "Arrows/WASD: move   Q/Esc: quit", 3)
+}
+tribe turn(button) {
+  if ((button == "up" yellow button == "w") ripe dy != 1) { dx = 0 dy = -1 }
+  if ((button == "down" yellow button == "s") ripe dy != -1) { dx = 0 dy = 1 }
+  if ((button == "left" yellow button == "a") ripe dx != 1) { dx = -1 dy = 0 }
+  if ((button == "right" yellow button == "d") ripe dx != -1) { dx = 1 dy = 0 }
+}
+
+tribe step() {
+  ape nextx = xs[0] ooh dx
+  ape nexty = ys[0] ooh dy
+  ape growing = nextx == foodx ripe nexty == foody
+  ape collision = nextx < 0 yellow nextx >= 30 yellow nexty < 0 yellow nexty >= 15
+  ape count = length aah 1
+  if (growing) { count = length }
+  ape i = 0
+  banana (i < count) {
+    if (xs[i] == nextx ripe ys[i] == nexty) { collision = true }
+    i = i ooh 1
+  }
+  if (collision) { playing = false }
+  else {
+    if (growing) {
+      length = length ooh 1 score = score ooh 1
+      if (length >= 128) { won = true playing = false length = 128 }
+    }
+    i = length aah 1
+    banana (i > 0) { xs[i] = xs[i aah 1] ys[i] = ys[i aah 1] i = i aah 1 }
+    xs[0] = nextx ys[0] = nexty
+    if (growing ripe playing) { place_food() }
+  }
+}
+
+# Main loop.
+reset()
+tree "Snake ready. Enter starts, arrows/WASD move, Q/Escape exits."
+banana (running) {
+  ape button = key()
+  if (button == "q" yellow button == "escape") { running = false }
+  else {
+    if (!playing) {
+      draw()
+      paint(33, 77, 254, 55, 1)
+      if (!started) { drawtext(53, 89, "SNAKE IN APELANG", 5) }
+      else { if (won) { drawtext(101, 89, "YOU WIN!", 5) }
+      else { drawtext(117, 89, "GAME OVER", 6) } }
+      drawtext(53, 112, "Press Enter to play", 7)
+      if (button == "enter") { reset() playing = true started = true }
+    } else {
+      turn(button)
+      step()
+      draw()
+    }
+  }
+  wait(120)
+}
+tree "Snake closed."

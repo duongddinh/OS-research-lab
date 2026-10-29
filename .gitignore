@@ -1,0 +1,11 @@
+*.o
+*.d
+*.bin
+*.elf
+*.img
+*.iso
+.direnv/
+result
+__pycache__/
+jordyOS/ape/programs.h
+*.apb

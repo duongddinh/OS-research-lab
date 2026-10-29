@@ -1,38 +1,47 @@
-ISO = calc.iso
-CC  = i686-elf-gcc
-LD  = i686-elf-ld
-CFLAGS = -ffreestanding -O2 -Wall -Wextra -std=c99
-OBJS = kernel_entry.o ctx_switch.o kernel.o app_calc.o app_edit.o
-
-KSECT = $(shell echo $$(( ( $(shell stat -f%z kernel.bin) + 511 ) / 512 )) )
-
+CC = $(if $(JORDY_CC),$(JORDY_CC),clang)
+LD = ld.lld
+OBJCOPY = llvm-objcopy
+NASM = nasm
+APELANG_DIR ?= ../vendor/apelang
+CFLAGS = --target=i686-none-elf -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -mno-sse -mno-sse2 -mstack-alignment=4 -O2 -Wall -Wextra -Wno-unused-parameter -std=c99
+APEFLAGS = $(CFLAGS) -DAPE_FREESTANDING -Iape -I$(APELANG_DIR)/src
+OBJS = kernel_entry.o ctx_switch.o kernel.o gui.o ape/platform.o ape/app_ape.o ape/compiler.o ape/lexer.o ape/vm.o
 all: os.img
-
-bootloader.bin: bootloader.asm kernel.bin          
-	@ksect=$$(echo $$(( ( $(shell stat -f%z kernel.bin) + 511 ) / 512 ))); \
-	 echo "  [LD]  writing bootloader for $$ksect sectors"; \
-	 nasm -f bin -DKERNEL_SECTORS=$$ksect $< -o $@
-
 kernel_entry.o: kernel_entry.asm
-	nasm -f elf32 $< -o $@
-
+	$(NASM) -f elf32 $< -o $@
 ctx_switch.o: ctx_switch.asm
-	nasm -f elf32 $< -o $@
-
+	$(NASM) -f elf32 $< -o $@
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-kernel.bin: linker.ld $(OBJS)
-	$(LD) -T linker.ld -o kernel.elf $(OBJS)
-	i686-elf-objcopy -O binary kernel.elf $@
-
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ape/platform.o: ape/platform.c
+	$(CC) $(APEFLAGS) -MMD -MP -c $< -o $@
+ape/programs.h: programs $(wildcard programs/*.ape) tools/embed.py
+	python3 tools/embed.py
+ape/app_ape.o: ape/app_ape.c ape/programs.h
+	$(CC) $(APEFLAGS) -MMD -MP -c $< -o $@
+ape/compiler.o: $(APELANG_DIR)/src/compiler/compiler.c
+	$(CC) $(APEFLAGS) -MMD -MP -c $< -o $@
+ape/lexer.o: $(APELANG_DIR)/src/lexer/lexer.c
+	$(CC) $(APEFLAGS) -MMD -MP -c $< -o $@
+ape/vm.o: $(APELANG_DIR)/src/vm/vm.c
+	$(CC) $(APEFLAGS) -MMD -MP -c $< -o $@
+kernel.elf: linker.ld $(OBJS)
+	$(LD) -m elf_i386 -T linker.ld -o $@ $(OBJS)
+kernel.bin: kernel.elf
+	$(OBJCOPY) -O binary $< $@
+bootloader.bin: bootloader.asm kernel.bin
+	$(NASM) -f bin -DKERNEL_SECTORS=$$(python3 -c 'import os; print((os.path.getsize("kernel.bin")+511)//512)') $< -o $@
 os.img: bootloader.bin kernel.bin
-	dd if=/dev/zero of=$@ bs=512 count=2880
-	dd if=bootloader.bin of=$@ conv=notrunc
-	dd if=kernel.bin   of=$@ bs=512 seek=1 conv=notrunc
-
+	python3 tools/image.py
 run: os.img
-	qemu-system-i386 -drive if=floppy,format=raw,file=os.img -boot a -m 32
-
+	qemu-system-i386 -drive if=floppy,format=raw,file=os.img -boot a -m 32 -serial stdio -snapshot -nic none
+HOST_CC ?= cc
+test-snake:
+	$(MAKE) -C $(APELANG_DIR) CC=$(HOST_CC)
+	python3 tools/test_snake.py $(APELANG_DIR)/apeslang
+test: os.img test-snake
+	python3 tools/smoke.py
 clean:
-	rm -f *.o *.bin *.elf os.img $(ISO)
+	rm -f $(OBJS) $(OBJS:.o=.d) *.bin *.elf os.img ape/programs.h
+-include $(OBJS:.o=.d)
+.PHONY: all run test test-snake clean
