@@ -1,244 +1,182 @@
-# jordyOS
+# JordyOS desktop and Apelang
 
-`jordyOS` is a minimal, bootable operating system featuring a command-line shell, a calculator application, and a text editor with in-memory file support.
+JordyOS is a BIOS-booted 32-bit x86 research OS. Its native 320x200 VGA desktop
+launches Calculator, Editor, the Apelang REPL, Snake, and a shell. Calculator,
+Editor, and Snake are written in Apelang, in `programs/calc.ape`,
+`programs/edit.ape`, and `programs/snake.ape`. A fourth Apelang application,
+`programs/history.ape`, shows the project timeline.
+The original C app sources are kept as historical examples and are not linked.
 
-It’s written in **x86 Assembly** and **C**, and is built with an i686-elf cross-compiler toolchain.
-The OS runs in **16-bit real mode** initially (via the bootloader), then switches to **32-bit protected mode** where it executes a multitasking kernel.
+## Build and run
 
----
+Install Nix with flakes enabled. From a fresh checkout:
 
-## High Level System Design
+```sh
+git clone --recurse-submodules https://github.com/duongddinh/OS-research-lab.git
+cd OS-research-lab
+# For an existing checkout:
+git submodule update --init --recursive
+nix develop
+make -C jordyOS
+make -C jordyOS run
+```
 
-![image](images/IMG_5794.png)
+The branch containing this integration must be checked out until it is merged.
+`flake.lock` pins NASM, LLVM/Clang, LLD, QEMU, Python, and Make. `JORDY_CC`
+selects the unwrapped compiler for the freestanding i686 target. No Homebrew
+cross-compiler or machine-wide installation is required.
 
-### System Name: jordyOS
+## Desktop
 
-**Type:** 32-bit x86 protected-mode kernel  
-**Architecture:** Cooperative multitasking with an in-memory file system
+Use Tab or the arrow keys to select a tile, Enter to open it, or keys 1–6 to
+launch directly. Escape selects the shell. Closing a desktop-launched app
+returns to the desktop. The initial GUI uses the keyboard; mouse navigation
+and overlapping application windows are not implemented.
 
----
+Apps open in a graphical terminal. Type `desktop` in the shell to reopen the
+launcher. QEMU's serial port can also be used for commands and automation.
 
-### Boot Process
+## Shell and applications
 
-- System powers on and BIOS runs in 16-bit real mode  
-- BIOS loads the first 512 bytes (bootloader) into memory at `0x7C00` and jumps there  
-- The bootloader:
-  - Initializes segments and stack
-  - Loads kernel sectors (starting at sector 2) into memory at `0x0800` using BIOS interrupt `13h`
-  - Performs a far jump to `0x0000:0800` to start executing the kernel
+| Command | Behavior |
+| --- | --- |
+| `history` | Show the project timeline from `history.ape` |
+| `snake` | Play the graphical Snake game written in `snake.ape` |
+| `calc` | Run `calc.ape`: `add 5 2`, `sub`, `mul`, `div`; `exit` closes |
+| `edit` | Run `edit.ape`, the line-oriented RAM-file editor |
+| `ape` | Start the persistent Apelang REPL; `exit` returns |
+| `ape demo.ape` | Compile and execute the bundled integration demo |
+| `ape name.ape` | Compile and execute a source file in RAM |
+| `compile helper.ape` | Compile a RAM source file to `helper.apb` |
+| `apb name.apb` | Execute RAM bytecode |
+| `ls` | List RAM files |
+| `desktop` | Open the desktop |
+| `clear` / `help` | Clear the terminal / show commands |
 
----
+The editor supports `new <fn>`, `open <fn>`, `show`, `edit`, `save [fn]`,
+`list`, `delete <fn>`, and `quit`. In `edit` mode, enter text line by line;
+a line containing only `.` finishes, and `.clear` empties the buffer.
 
-### Protected Mode Setup
+To create and run a program:
 
-- The kernel starts in real mode at `0x0800`
-- Disables interrupts (`CLI`)
-- Loads the Global Descriptor Table (GDT) with:
-  - Entry 0: null
-  - Entry 1: 32-bit code segment (selector `0x08`)
-  - Entry 2: 32-bit data/stack segment (selector `0x10`)
-- Sets the PE (Protection Enable) bit in `CR0`
-- Executes a far jump to `0x08:protected_start` to enter full 32-bit mode
-
----
-
-### Kernel Initialization
-
-- Sets segment registers `DS`, `SS`, etc. to `0x10` (data segment)
-- Sets `ESP` to `0x9FC00` (kernel stack)
-- Calls `kmain()` (now in 32-bit C)
-
----
-
-### kmain() Performs
-
-- Initializes in-memory file system (`fs[]`)
-- Prints welcome message
-- Creates the shell task using `task_create(shell, sh_stack, size)`
-- Calls `ctx_switch()` to jump to the shell task
-
----
-
-### Task Management
-
-- Each task has its own static stack and entry function
-- `task_create()` sets up a fake stack:
-  - Pushes the app function as the return address
-  - Pushes `0`s for `EBP`, `EBX`, `ESI`, `EDI` (callee-saved registers)
-  - Saves the stack pointer to `tasks[i].sp`
-
----
-
-### Context Switching (`ctx_switch.asm`)
-
-- Saves current task’s registers (`push ebp`, `ebx`, `esi`, `edi`)
-- Saves `ESP` to the old task’s `sp`
-- Loads new task’s `ESP`
-- Pops new task’s registers (`pop edi`, `esi`, `ebx`, `ebp`)
-- `RET`: jumps into the new task (starts running)
-
----
-
-### Scheduler (`yield`)
-
-- Round-robin, cooperative scheduler
-- Picks next task in `tasks[]` that has a non-`NULL` stack
-- If found, updates `cur` index and calls `ctx_switch()`
-- Tasks must call `sys_yield()` voluntarily to allow switching
-
----
-
-### Shell Task
-
-- Displays `sh>` prompt
-- Accepts commands like:
-  - `calc`: launches calculator app
-  - `edit`: launches editor app
-  - `help`, `clear`, etc.
-- Each app is started using `task_create()` and gets its own stack
-
----
-
-### App Example: `app_edit()` (Editor)
-
-- CLI-based editor with commands:
-  - `new <file>`: creates a file buffer
-  - `open <file>`: loads file content from `fs[]`
-  - `edit`: enters live typing mode (ESC to exit)
-  - `save [file]`: saves buffer to virtual file system
-  - `list`: lists all virtual files
-  - `delete <file>`: removes file from memory
-  - `quit`: exits the task
-
----
-
-### In-Memory File System
-
-- Uses a global array `fs[]` of file structs:
-  - Each file has a name, data buffer, size, and `in_use` flag
-- Accessed using system calls:
-  - `sys_write_file(filename, buffer, size)`
-  - `sys_read_file(filename, buffer, max_size)`
-  - `sys_delete_file(filename)`
-  - `sys_list_files(output_buffer, max_len)`
-- No disk persistence: files are stored only in RAM
-
----
-
-### System Calls Summary
-
-- `sys_write(str)`: prints to screen
-- `sys_getc()`: reads one key
-- `sys_yield()`: triggers task switch
-- `sys_exit_task()`: terminates current task
-- `sys_read_file()`, `sys_write_file()`, etc.: access virtual file system
-
----
-
-### Memory Model
-
-- Flat 32-bit addressing
-- No paging or virtual memory yet
-- Each task has a separate stack
-- Code and data are shared globally (no user/kernel separation)
-
----
-
-
-## Features
-
--   **Bootloader (`bootloader.asm`)**:
-    * Sets up the system from a 16-bit real mode environment.
-    * Loads the kernel into memory.
-    * Transitions the CPU to 32-bit protected mode.
--   **Kernel (`kernel.c`, `kernel_entry.asm`, `ctx_switch.asm`)**:
-    * **VGA Text Mode Output**: Displays text on the screen.
-    * **Polling Keyboard Input**: Reads keystrokes via I/O ports.
-    * **Cooperative Multitasking**: A simple scheduler allows multiple tasks (applications) to run.
-    * **System Calls**: Provides an API for:
-        * Console I/O (`sys_write`, `sys_getc`).
-        * Task management (`sys_yield`, `sys_exit_task`).
-        * Screen manipulation (`sys_clear_screen`).
-        * In-memory file operations (`sys_list_files`, `sys_read_file`, `sys_write_file`, `sys_delete_file`).
--   **Shell (`sh>`)**:
-    * Provides a command-line interface after booting.
-    * Parses user input to launch applications or execute built-in commands.
-    * **Built-in commands**:
-        * `calc`: Launches the calculator application.
-        * `edit`: Launches the text editor application.
-        * `clear` (or `cls`): Clears the terminal screen.
-        * `help`: Displays available shell commands.
--   **Applications**:
-    * **`app_calc` (Calculator)**:
-        * Interactive command-line interface (`calc>`).
-        * Performs basic arithmetic operations: `add`, `sub`, `mul`, `div`.
-        * Supports an `exit` or `quit` command to return to the main shell.
-    * **`app_edit` (Text Editor)**:
-        * Command-driven interface (`edit#` or `edit [filename]#`).
-        * **In-Memory File System**:
-            * `new <filename>`: Create a new text file in memory.
-            * `open <filename>`: Load an existing in-memory file.
-            * `save [filename]`: Save the current text buffer to an in-memory file.
-            * `list`: List all in-memory files.
-            * `delete <filename>`: Remove an in-memory file.
-        * **Text Input Mode**: Entered via the `edit` command (within `app_edit`) to add or modify text. Exit with `ESC`.
-        * `quit`: Exits the editor and returns to the main shell.
-
----
-
-## Example Usage
-
-```txt
-jordyOS multitask w/ In-Memory FS 
-
-sh> help
-Available commands:
-  calc    - Run the calculator app
-  edit    - Run the text editor app
-  clear   - Clear the screen
-  help    - Show this help message
-
-sh> calc
-Calculator App. Type 'exit' or 'quit' to close.
-calc> add 10 5
-15
-calc> mul 3 7
-21
-calc> exit
-Exiting calculator...
-
+```text
 sh> edit
-Editor v0.4 (In-Memory FS)
-Commands: list, new <fn>, open <fn>, edit, save [fn], delete <fn>, quit
-edit# new myfile.txt
-New file 'myfile.txt' in buffer. Use 'edit', then 'save'.
-edit [myfile.txt]# edit
---- Text Edit Mode (Press ESC to finish) ---
-Hello world!
-This is a test file.
---- Exiting Text Edit Mode ---
-edit [myfile.txt]# save
-File 'myfile.txt' saved (36 bytes).
-edit [myfile.txt]# list
-Files:
-myfile.txt
-edit [myfile.txt]# quit
-Exiting editor...
-
-sh> clear
-```
-### Install Toolchain (if not already)
-
-```
-$ brew install cdrkit
-$ brew install cdrtools
-$ brew install i686-elf-binutils i686-elf-gcc
-$ brew install nasm qemu
+edit# new hello.ape
+edit# edit
+tree "Hello from my OS"
+.
+edit# save
+edit# quit
+sh> ape hello.ape
+Hello from my OS
 ```
 
-### Build and Run the OS
+New portable language built-ins are `asktext()` (always a string),
+`number(text)` (checked conversion), `files()` (newline-separated file names),
+and `erase(path)` (boolean result). `ask()` keeps its original numeric-input
+behavior. In JordyOS, file operations use the kernel RAM filesystem.
 
+For modules, compile each dependency first. The bundled example is:
+
+```text
+sh> compile helper.ape
+sh> ape module.ape
+42
+MODULE PASS
 ```
-$ make
-$ make run
+
+## Project history
+
+Press 6 on the desktop or type `history` in the shell. The history app displays
+the author's development dates: JordyOS on May 11, 2025, Apelang on July 5,
+2025, and the graphical desktop, applications, game, and runtime upgrade in
+late 2026. Q, Escape, or Enter closes it. These dates are recorded in the
+editable `programs/history.ape` source.
+
+## Snake and game APIs
+
+Press 5 on the desktop, or type `snake` in the shell. Enter starts or restarts,
+arrows or WASD turn, and Q or Escape quits. Snake uses a 30x15 board, tracks
+score, grows after food, rejects reverse turns, and ends on wall/body collision.
+The rules and drawing calls are in `programs/snake.ape`, including `turn()`,
+`step()`, `place_food()`, and `draw()`. The kernel contains no Snake rules.
+The maximum length is 128; reaching it wins.
+
+| Apelang built-in | Behavior |
+| --- | --- |
+| `paint(x, y, width, height, color)` | Draw a clipped filled rectangle |
+| `drawtext(x, y, text_or_number, color)` | Draw text over the current image |
+| `key()` | Nonblocking key name or `""`; arrows, enter, escape, and typed characters |
+| `wait(milliseconds)` | Wait 1–1000 ms using the guest PIT timer |
+| `random(limit)` | Deterministic pseudorandom integer in `[0, limit)` |
+
+Colors are 0 navy, 1 panel, 2 card, 3 muted, 4 teal, 5 mint, 6 gold,
+7 white, 8 ink, and 9 selection. The graphics canvas is 320x200 pixels.
+Drawing, nonblocking input, and frame timing currently require JordyOS; on
+a hosted VM they raise a catchable error. `random()` also works on the host.
+Its fixed initial seed makes game tests reproducible; it is not cryptographic.
+
+Snake has a fifty-million-instruction session budget. Other guest programs
+retain the five-million-instruction budget. Frames are spaced by 120 ms.
+The C platform layer supplies only drawing, input, and timing services.
+
+![JordyOS desktop](images/desktop-apelang.png)
+![Snake running in JordyOS](images/snake-apelang.png)
+![Project history](images/history-apelang.png)
+
+## Architecture and changes
+
+The BIOS loader keeps its remaining-sector counter separate from CHS disk
+registers, retries failed reads, and advances ES for every sector. It loads
+the kernel at physical `0x10000`, away from the bootloader at `0x7c00`.
+The build rejects an image exceeding the reserved 448 KiB load area.
+
+The bootloader selects VGA mode 13h and obtains the BIOS 8x8 ROM font before
+entering protected mode. The kernel sets a small color palette and draws the
+desktop and terminal into the framebuffer at `0xa0000`. The font API is
+specified in the [IBM BIOS technical reference](https://www.ardent-tool.com/docs/pdf/PS2_and_PC_BIOS_Interface_Technical_Reference_Apr87.pdf).
+
+The entry code enables A20, initializes x87 floating point, clears BSS above
+1 MiB, and enters C. The runtime has a reusable 4 MiB heap with split/coalesce
+allocation, a 64 KiB task stack, and the actual Apelang compiler/lexer/VM
+compiled from the pinned submodule. Apelang bytecode runs on the guest CPU.
+
+The serial console enables repeatable integration tests. The foreground app
+owns console input until it exits; the shell cannot steal its keystrokes.
+Task startup uses a trampoline so returning from an app exits it safely.
+
+## Validation
+
+```sh
+nix develop --command make -C jordyOS test
 ```
+
+The test boots `os.img` in headless QEMU and exercises source and bytecode
+execution, modules, recursive functions, arrays/maps, file I/O, caught and
+uncaught errors, REPL recovery, map growth, a 100,000-iteration allocation
+loop, instruction-budget recovery, repeated application launches, and the
+complete editor save/reopen/run/delete flow. Seven additional tests execute the actual Snake rules to verify eating,
+growth, wall/self collision, turning, vacated-tail handling, food placement,
+and winning at the array bound. The emulator test starts/exits Snake and
+checks the game launcher. It also launches each Apelang
+app from the desktop and verifies return to the launcher.
+
+The serial transcript is written to `/tmp/jordyos-smoke.log` by default.
+Set `QEMU` to choose another emulator binary and `SMOKE_LOG` for another log.
+
+## Current limits
+
+This is an educational OS running trusted programs in kernel address space.
+There is no process isolation, paging, networking, persistent storage, or
+preemptive scheduling. All RAM files are lost when QEMU restarts. There are
+16 files, each limited to 16 KiB, with names up to 31 bytes. The built-in
+application scripts can be edited in RAM; rebuilding restores their source.
+
+A guest execution has a five-million-instruction budget so an accidental
+infinite loop returns to the launcher or REPL. The heap and filesystem are
+bounded, but the VM is not a security sandbox. Font/input handling is ASCII
+with a US keyboard layout. Numbers print with six significant digits; Unicode and terminal escape sequences are not implemented.
+
+A browser demo on cytizennetworks.com is a separate follow-up: it needs an
+isolated browser emulator and a reviewed deployment. This change does not
+publish a website or alter Cytizen production infrastructure.

@@ -1,48 +1,49 @@
-; assemble:  nasm -f elf32 kernel_entry.asm -o kernel_entry.o
-
 BITS 16
+SECTION .entry
 GLOBAL _start
-
+EXTERN kmain, __bss_start, __bss_end
 _start:
-    cli                         ; keep IRQs off during mode switch
-    lgdt [gdt_descriptor]       ; load 32‑bit flat GDT
-
-    mov  eax, cr0
-    or   eax, 1                 ; set PE bit
-    mov  cr0, eax
-    jmp  08h:protected_start    ; far jump, 32‑bit code segment
-
+    cli
+    cld
+    mov ax, 0x1000
+    mov ds, ax
+    ; Enable A20 before using the runtime heap above 1 MiB.
+    in al, 0x92
+    or al, 2
+    and al, 0xfe
+    out 0x92, al
+    lgdt [gdt_descriptor - _start]
+    mov eax, cr0
+    and eax, 0xfffffffb       ; clear EM
+    or eax, 0x23             ; PE and MP
+    mov cr0, eax
+    jmp dword 0x08:protected_start
 BITS 32
 protected_start:
-    mov ax, 0x10                ; data segment selector
+    mov ax, 0x10
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
     mov ss, ax
-    mov esp, 0x9FC00            ; temp 32‑bit stack (below 640k)
-
-
-    extern kmain
-    call  kmain                 ; jump into C kernel
-
+    mov esp, 0x90000
+    fninit                   ; Apelang numbers use x87 doubles.
+    mov edi, __bss_start
+    mov ecx, __bss_end
+    sub ecx, edi
+    xor eax, eax
+    rep stosb
+    call kmain
 .hang:
     hlt
-    jmp  .hang
-
+    jmp .hang
+ALIGN 8
 gdt_start:
-    dq 0                        ; null descriptor
-
-gdt_code:                       ; selector 0x08
-    dw 0xFFFF, 0x0000
-    db 0x00, 0x9A, 0xCF, 0x00    ; base 0, limit 4GB, code, 32‑bit
-
-gdt_data:                       ; selector 0x10
-    dw 0xFFFF, 0x0000
-    db 0x00, 0x92, 0xCF, 0x00    ; base 0, limit 4GB, data, 32‑bit
-
+    dq 0
+    dq 0x00cf9a000000ffff
+    dq 0x00cf92000000ffff
 gdt_end:
-
 gdt_descriptor:
-    dw gdt_end - gdt_start - 1   ; size‑1
-    dd gdt_start                 ; linear address
+    dw gdt_end - gdt_start - 1
+    dd gdt_start
+SECTION .note.GNU-stack noalloc noexec nowrite progbits

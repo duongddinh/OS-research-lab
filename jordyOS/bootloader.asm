@@ -1,69 +1,89 @@
-; Build: nasm -f bin -DKERNEL_SECTORS=<n> bootloader.asm -o bootloader.bin
-%ifndef KERNEL_SECTORS
- %error "assemble with -DKERNEL_SECTORS=<number>"
-%endif
-
+; BIOS floppy loader. ES advances one sector at a time, independent of CHS.
 BITS 16
 ORG 0x7C00
-
+%ifndef KERNEL_SECTORS
+%error "KERNEL_SECTORS is required"
+%endif
+%if KERNEL_SECTORS > 896
+%error "Kernel exceeds reserved conventional-memory load area"
+%endif
 start:
-    mov  [Drive], dl          ; save boot drive #
-    xor  ax, ax
-    mov  ds, ax
-    mov  es, ax
-    mov  ss, ax
-    mov  sp, 0x7C00
-
-    mov  bx, 0x0800           ; load addr
-    mov  cx, KERNEL_SECTORS
-    mov  byte [Sec], 2
-    mov  byte [Head], 0
-    mov  byte [Cyl],  0
-
+    cli
+    xor ax, ax
+    mov ds, ax
+    mov ss, ax
+    mov sp, 0x7C00
+    sti
+    cld
+    mov [drive], dl
+    ; Graphics mode and ROM font are selected while BIOS services are available.
+    mov ax, 0x0013
+    int 0x10
+    mov ax, 0x1130
+    mov bh, 3
+    int 0x10
+    xor eax, eax
+    mov ax, es
+    shl eax, 4
+    movzx ebx, bp
+    add eax, ebx
+    mov [0x500], eax
+    mov word [remaining], KERNEL_SECTORS
+    mov ax, 0x1000
+    mov es, ax
 .next:
-    mov  dl, [Drive]
-    mov  ch, [Cyl]
-    mov  dh, [Head]
-    mov  cl, [Sec]
-    mov  ah, 2
-    mov  al, 1
-    int  0x13
-    jc   .err
-
-    ; dot for progress
-    mov  al, '.'
-    mov  ah, 0x0E
-    int  0x10
-
-    add  bx, 512
-    inc  byte [Sec]
-    cmp  byte [Sec], 19
-    jne  .adv_ok
-    mov  byte [Sec], 1
-    inc  byte [Head]
-    cmp  byte [Head], 2
-    jne  .adv_ok
-    mov  byte [Head], 0
-    inc  byte [Cyl]
-.adv_ok:
-    dec  cx
-    jnz  .next
-
-    jmp  0000h:0800h          ; jump to kernel
-
-.err:
-    mov si, msg
-.pr: lodsb
-     or  al, al
-     jz  $
-     mov ah,0x0E
-     int 0x10
-     jmp .pr
-
-Drive db 0
-Sec   db 0
-Head  db 0
-Cyl   db 0
-msg   db 'ERR',0
+    mov byte [retries], 3
+.retry:
+    xor bx, bx
+    mov dl, [drive]
+    mov ch, [cylinder]
+    mov dh, [head]
+    mov cl, [sector]
+    mov ax, 0x0201
+    push es
+    int 0x13
+    pop es
+    jnc .loaded
+    xor ax, ax
+    mov dl, [drive]
+    push es
+    int 0x13
+    pop es
+    dec byte [retries]
+    jnz .retry
+    mov si, message
+.error:
+    lodsb
+    test al, al
+    jz .halt
+    mov ah, 0x0e
+    int 0x10
+    jmp .error
+.halt:
+    cli
+    hlt
+    jmp .halt
+.loaded:
+    mov ax, es
+    add ax, 0x20
+    mov es, ax
+    inc byte [sector]
+    cmp byte [sector], 19
+    jne .advance
+    mov byte [sector], 1
+    xor byte [head], 1
+    jnz .advance
+    inc byte [cylinder]
+.advance:
+    dec word [remaining]
+    jnz .next
+    jmp 0x1000:0
+remaining dw 0
+drive db 0
+sector db 2
+head db 0
+cylinder db 0
+retries db 0
+message db 'Disk read failed', 0
 times 510-($-$$) db 0
 dw 0xAA55

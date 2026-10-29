@@ -1,3 +1,19 @@
+# JordyOS with Apelang
+
+The current kernel boots to a small VGA desktop with Calculator, Editor,
+Apelang REPL, and Shell launchers. Calculator and Editor are Apelang programs;
+the C/assembly kernel supplies the graphics, input, memory, and file services.
+
+See [the current build and usage guide](jordyOS/readme.md) for the reproducible
+Nix setup, QEMU commands, tests, and limitations. The Apelang compiler/VM is
+pinned as a Git submodule under `vendor/apelang`.
+
+The material below is the original research write-up. Addresses, toolchain,
+application implementation, and file limits in that historical description
+have been superseded by the current guide and source.
+
+---
+
 Every programmer, at some point, dreams of building their own operating system. As I read and learn more about operating system, I decided that the best way to learn is to actually do it, and the result is jordyOS, a minimal, 32-bit protected-mode operating system written from scratch in C and x86 Assembly.
 
 It works. I’m still learning, and this is a documentation of what I’ve learned and what I know.

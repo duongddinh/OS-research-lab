@@ -3,52 +3,7 @@
 #include <stdint.h>
 
 #include "util.h"
-static volatile uint16_t *const vga = (uint16_t *)0xB8000;
-static uint8_t row = 0, col = 0;
-static uint8_t attr = 0x0F;
-
-static void clear_screen_internal(void) {
-  for (int r = 0; r < 25; r++) {
-    for (int c = 0; c < 80; c++) {
-      vga[r * 80 + c] = (attr << 8) | ' ';
-    }
-  }
-  row = 0;
-  col = 0;
-}
-
-static void putc(char c) {
-  if (c == '\b') {
-    if (col > 0) col--;
-    return;
-  }
-  if (c == '\n' || col >= 80) {
-    col = 0;
-    row++;
-  }
-  if (row >= 25) {  // Screen is full, scroll up
-    // Move all lines up by one
-    for (int i = 0; i < 24 * 80; i++) vga[i] = vga[i + 80];
-    // Clear the last line
-    for (int i = 24 * 80; i < 25 * 80; i++) vga[i] = (attr << 8) | ' ';
-    row = 24;  // Reset row to the new last line
-  }
-  if (c != '\n') vga[row * 80 + col++] = (attr << 8) | (uint8_t)c;
-}
-
-static void puts(const char *s) {
-  while (*s) {
-    if (s[0] == '\b' && s[1] == ' ' && s[2] == '\b') {
-      if (col > 0) {
-        col--;
-        vga[row * 80 + col] = (attr << 8) | ' ';
-      }
-      s += 3;
-    } else {
-      putc(*s++);
-    }
-  }
-}
+#include "gui.h"
 
 static inline uint8_t inb(uint16_t p) {
   uint8_t r;
@@ -56,24 +11,67 @@ static inline uint8_t inb(uint16_t p) {
   return r;
 }
 
-static char get_ch(void) {
+static inline void outb(uint16_t port, uint8_t value) {
+  __asm__ volatile("outb %0,%1" : : "a"(value), "Nd"(port));
+}
+static void serial_init(void) {
+  outb(0x3f9, 0); outb(0x3fb, 0x80); outb(0x3f8, 1); outb(0x3f9, 0);
+  outb(0x3fb, 3); outb(0x3fa, 0xc7); outb(0x3fc, 0x0b);
+}
+static void serial_putc(char c) {
+  if (c == '\n') serial_putc('\r');
+  while (!(inb(0x3fd) & 0x20)) __asm__ volatile("pause");
+  outb(0x3f8, c);
+}
+
+static void clear_screen_internal(void) { gui_clear(); }
+static void putc(char c) { serial_putc(c); gui_putc(c); }
+static void puts(const char* s) { while (*s) putc(*s++); }
+
+static char poll_ch(void) {
   static const char map[0x3A] = {
       0,   27,  '1', '2',  '3',  '4', '5', '6',  '7', '8', '9', '0',
       '-', '=', 8,   '\t', 'q',  'w', 'e', 'r',  't', 'y', 'u', 'i',
       'o', 'p', '[', ']',  '\n', 0,   'a', 's',  'd', 'f', 'g', 'h',
       'j', 'k', 'l', ';',  '\'', '`', 0,   '\\', 'z', 'x', 'c', 'v',
       'b', 'n', 'm', ',',  '.',  '/', 0,   '*',  0,   ' '};
-  uint8_t sc;
-  for (;;) {
-    if (inb(0x64) & 0x01) {
-      sc = inb(0x60);
-      if (sc & 0x80) continue;
-      if (sc < 0x3A && map[sc] != 0) return map[sc];
+  static const char shifted[0x3A] = {
+      [2]='!', [3]='@', [4]='#', [5]='$', [6]='%', [7]='^', [8]='&',
+      [9]='*', [10]='(', [11]=')', [12]='_', [13]='+', [26]='{', [27]='}',
+      [39]=':', [40]='"', [41]='~', [43]='|', [51]='<', [52]='>', [53]='?'};
+  static bool left_shift=false, right_shift=false;
+  {
+    if (inb(0x3fd) & 1) {
+      char c=(char)inb(0x3f8); return c=='\r'?'\n':c;
     }
+    if (inb(0x64) & 1) {
+      uint8_t sc=inb(0x60);
+      if (sc==42 || sc==0xaa) { left_shift=sc==42; return 0; }
+      if (sc==54 || sc==0xb6) { right_shift=sc==54; return 0; }
+      if (sc & 0x80) return 0;
+      if (sc==0x4b) return 0x11;
+      if (sc==0x4d) return 0x12;
+      if (sc==0x48) return 0x13;
+      if (sc==0x50) return 0x14;
+      if (sc < 0x3A && map[sc]) {
+        char c=map[sc];
+        if (left_shift || right_shift) {
+          if (c>='a' && c<='z') c-=32;
+          else if (shifted[sc]) c=shifted[sc];
+        }
+        return c;
+      }
+    }
+    return 0;
   }
 }
 
+static char get_ch(void) {
+  for (;;) { char c=poll_ch(); if (c) return c; __asm__ volatile("pause"); }
+}
+
 void read_line(char *buf, int max) {
+  if (!buf || max <= 0) return;
   int len = 0;
   for (;;) {
     char c = get_ch();
@@ -142,13 +140,13 @@ int32_t atoi(const char *s) {
 }
 void itoa(int32_t n, char *buf) {
   bool neg = n < 0;
-  if (neg) n = -n;
+  uint32_t magnitude = neg ? 0u - (uint32_t)n : (uint32_t)n;
   char t[12];
   int i = 0;
   do {
-    t[i++] = '0' + (n % 10);
-    n /= 10;
-  } while (n > 0);
+    t[i++] = '0' + (magnitude % 10);
+    magnitude /= 10;
+  } while (magnitude > 0);
   if (i == 0) t[i++] = '0';
   if (neg) t[i++] = '-';
   int j = 0;
@@ -156,7 +154,6 @@ void itoa(int32_t n, char *buf) {
   buf[j] = 0;
 }
 
-#define MAX_FILE_SIZE 512
 typedef struct {
   char name[MAX_FILENAME_LEN];
   char data[MAX_FILE_SIZE];
@@ -208,6 +205,10 @@ static void yield(void) {
   cur = n;
   ctx_switch(o, tasks[cur].sp);
 }
+static void task_bootstrap(void) {
+  tasks[cur].entry();
+  sys_exit_task();
+}
 static void task_create(void (*fn)(void), uint8_t *s_bot,
                         size_t s_sz) { 
   int si = -1;
@@ -225,7 +226,7 @@ static void task_create(void (*fn)(void), uint8_t *s_bot,
       }
   if (si != -1) {
     uint32_t *sp = (uint32_t *)(s_bot + s_sz);
-    *(--sp) = (uint32_t)fn;
+    *(--sp) = (uint32_t)task_bootstrap;
     *(--sp) = 0;
     *(--sp) = 0;
     *(--sp) = 0;
@@ -238,6 +239,7 @@ static void task_create(void (*fn)(void), uint8_t *s_bot,
 
 void sys_write(const char *s) { puts(s); }
 char sys_getc(void) { return get_ch(); }
+char sys_pollc(void) { return poll_ch(); }
 void sys_yield(void) { yield(); }
 void sys_exit_task(void) {
   if (cur != -1) tasks[cur].sp = NULL;
@@ -281,7 +283,7 @@ int sys_read_file(const char *fn, char *ub, int us) {
 }
 int sys_write_file(const char *fn, const char *d, int dl) { 
   if (!fn || !d || dl < 0) return -1;
-  if (strlen(fn) >= MAX_FILENAME_LEN) return -2;
+  if (!fn[0] || strlen(fn) >= MAX_FILENAME_LEN) return -2;
   if (dl > MAX_FILE_SIZE) return -3;
   int fi = fs_find_file(fn);
   if (fi == -1) {
@@ -305,38 +307,49 @@ int sys_delete_file(const char *fn) {
   return 0;
 }
 
-void app_calc(void);
-void app_edit(void);
+void app_ape(void);
+void ape_seed_files(void);
+char ape_command[96];
 
 static void shell(void) {
-  char shell_cmd_buffer[32];
+  char shell_cmd_buffer[96];
+  bool desktop_mode=true;
+  static uint8_t app_stack[65536] __attribute__((aligned(16)));
 
   for (;;) {
-    sys_write("\nsh> ");
-    read_line(shell_cmd_buffer, sizeof(shell_cmd_buffer));
+    if (desktop_mode) {
+      int action=gui_desktop();
+      gui_terminal(action==0 ? "Calculator / Apelang" : action==1 ? "Editor / Apelang" :
+                   action==2 ? "Apelang / REPL" : "JordyOS / Shell");
+      if (action==3) { desktop_mode=false; continue; }
+      strcpy(shell_cmd_buffer,action==0 ? "calc" : action==1 ? "edit" : action==4 ? "snake" : action==5 ? "history" : "ape");
+    } else {
+      sys_write("\nsh> ");
+      read_line(shell_cmd_buffer, sizeof(shell_cmd_buffer));
+    }
 
-    if (!strcmp(shell_cmd_buffer, "calc")) {
-      bool running = false;
-      for (int i = 0; i < MAX_TASKS; ++i)
-        if (tasks[i].entry == app_calc && tasks[i].sp != NULL) running = true;
-      if (running)
-        sys_write("calc is already running.\n");
-      else {
-        static uint8_t st[1024];
-        task_create(app_calc, st, sizeof st);
-      }
-    } else if (!strcmp(shell_cmd_buffer, "edit")) {
-      bool running = false;
-      for (int i = 0; i < MAX_TASKS; ++i)
-        if (tasks[i].entry == app_edit && tasks[i].sp != NULL) running = true;
-      if (running)
-        sys_write("edit is already running.\n");
-      else {
-        static uint8_t st[2048];
-        task_create(app_edit, st, sizeof st);
-      }
+    if (!strcmp(shell_cmd_buffer, "ape") || !memcmp(shell_cmd_buffer, "ape ", 4) ||
+        !memcmp(shell_cmd_buffer, "apb ", 4) || !memcmp(shell_cmd_buffer, "compile ", 8)) {
+      strcpy(ape_command, shell_cmd_buffer);
+      task_create(app_ape, app_stack, sizeof app_stack);
+    } else if (!strcmp(shell_cmd_buffer, "ls")) {
+      char files[MAX_FILES * (MAX_FILENAME_LEN + 1)];
+      sys_list_files(files, sizeof(files)); sys_write(files); sys_write("\n");
+    } else if (!strcmp(shell_cmd_buffer, "calc") || !strcmp(shell_cmd_buffer, "edit") || !strcmp(shell_cmd_buffer, "snake") || !strcmp(shell_cmd_buffer, "history")) {
+      strcpy(ape_command, !strcmp(shell_cmd_buffer, "calc") ? "ape calc.ape" : !strcmp(shell_cmd_buffer, "edit") ? "ape edit.ape" : !strcmp(shell_cmd_buffer, "snake") ? "ape snake.ape" : "ape history.ape");
+      task_create(app_ape, app_stack, sizeof app_stack);
+    } else if (!strcmp(shell_cmd_buffer, "desktop")) {
+      desktop_mode=true;
     } else if (!strcmp(shell_cmd_buffer, "help")) {
       sys_write("Available commands:\n");
+      sys_write("  desktop         - Open graphical launcher\n");
+      sys_write("  snake           - Play Snake (Apelang graphics)\n");
+      sys_write("  history         - View project development dates\n");
+      sys_write("  ape             - Apelang REPL (exit to return)\n");
+      sys_write("  ape <file.ape>  - Compile and run source\n");
+      sys_write("  compile <file.ape> - Compile to RAM bytecode\n");
+      sys_write("  apb <file.apb>  - Run Apelang bytecode\n");
+      sys_write("  ls              - List RAM files\n");
       sys_write("  calc    - Run the calculator app\n");
       sys_write("  edit    - Run the text editor app\n");
       sys_write("  clear   - Clear the screen\n");
@@ -349,15 +362,25 @@ static void shell(void) {
       sys_write(shell_cmd_buffer);
       sys_write("'. Type 'help'.\n");
     }
-    sys_yield();
+    // A single console belongs to the foreground app until it exits.
+    for (;;) {
+      bool foreground=false;
+      for (int i=0; i<MAX_TASKS; i++) if (i!=cur && tasks[i].sp) foreground=true;
+      if (!foreground) break;
+      sys_yield();
+    }
   }
 }
 
 void kmain(void) {
+  serial_init();
+  gui_init();
+  clear_screen_internal();
   fs_init();
+  ape_seed_files();
   puts("\n*** jordyOS multitask w/ In-Memory FS ***\n");
 
-  static uint8_t sh_stack[1024];
+  static uint8_t sh_stack[4096];
   task_create(shell, sh_stack, sizeof sh_stack);
   cur = -1;
   for (int i = 0; i < MAX_TASKS; ++i)

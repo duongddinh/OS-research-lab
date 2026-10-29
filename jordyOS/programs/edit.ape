@@ -1,0 +1,56 @@
+# JordyOS RAM-file editor. Application logic is entirely Apelang.
+tree "Apelang Editor. list, new <fn>, open <fn>, show, edit, save [fn], delete <fn>, quit"
+ape filename = ""
+ape content = ""
+ape running = true
+banana (running) {
+  tree "edit# "
+  ape line = shed(asktext())
+  ape command = line
+  ape argument = ""
+  ape space = scan(line, " ")
+  if (space > 0) {
+    command = slice(line, 0, space)
+    argument = shed(slice(line, space ooh 1, tally(line)))
+  }
+  if (command == "quit") { running = false }
+  else { if (command == "list") { tree files() }
+  else { if (command == "new") {
+    if (argument == "") { tree "Usage: new <filename>" }
+    else { filename = argument content = "" tree "New file in buffer. Use edit then save." }
+  }
+  else { if (command == "open") {
+    ape loaded = forage(argument)
+    if (loaded == nil) { tree "File not found." }
+    else { filename = argument content = loaded tree "File opened." }
+  }
+  else { if (command == "show") { tree content }
+  else { if (command == "edit") {
+    if (filename == "") { tree "Use new or open first." }
+    else {
+      tree "Append text one line at a time. A single . finishes; .clear clears the buffer."
+      ape editing = true
+      banana (editing) {
+        ape text = asktext()
+        if (text == ".") { editing = false }
+        else { if (text == ".clear") { content = "" }
+        else { content = graft(content, graft(text, "
+")) } }
+      }
+    }
+  }
+  else { if (command == "save") {
+    if (argument != "") { filename = argument }
+    if (filename == "") { tree "Usage: save <filename>" }
+    else { if (inscribe(filename, content)) { tree "File saved." }
+    else { tree "Cannot save: RAM file or filename limit exceeded." } }
+  }
+  else { if (command == "delete") {
+    if (erase(argument)) {
+      tree "File deleted."
+      if (argument == filename) { filename = "" content = "" }
+    } else { tree "File not found." }
+  }
+  else { tree "Unknown command." } } } } } } } }
+}
+tree "Exiting editor..."

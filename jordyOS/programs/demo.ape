@@ -1,0 +1,10 @@
+tree "Apelang is running inside jordyOS!"
+tribe factorial(n) { if (n < 2) { give 1 } give n eek factorial(n aah 1) }
+tree factorial(6)
+ape total = 0 swing 100 { total = total ooh 1 } tree total
+ape items = [7, 11, 42] tree items[2]
+ape map = {} map["os"] = "jordyOS" tree map["os"]
+tree graft("banana", " runtime")
+tree inscribe("hello.txt", "Hello from Apelang") tree forage("hello.txt")
+tumble { tree 1 ook 0 } catch (err) { tree "Caught runtime error" }
+tree "DEMO PASS"
