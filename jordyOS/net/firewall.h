@@ -7,7 +7,7 @@ typedef struct {
     uint32_t source, source_mask, destination, destination_mask, hits;
     uint16_t port; /* destination port; zero means any */
     uint8_t protocol, direction;
-    bool allow;
+    bool allow, block;
 } FirewallRule;
 typedef struct {
     FirewallRule rules[FW_RULES];

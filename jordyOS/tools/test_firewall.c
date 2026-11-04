@@ -119,4 +119,5 @@ static void policy(void) {
     rule.protocol = NET_ICMP; assert(!fw_add(&fw, &rule)); /* No ports on ICMP. */
     puts("PASS first-match policy, CIDR/port/direction matching, counters, deletion, capacity, reset");
 }
-int main(void) { decoding(); parsing(); policy(); return 0; }
+void test_bpf(void);
+int main(void) { decoding(); parsing(); policy(); test_bpf(); return 0; }

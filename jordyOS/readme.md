@@ -91,9 +91,14 @@ MODULE PASS
 
 The [native firewall guide](net/README.md) describes the first JordyOS firewall
 milestone: ordered rules, incoming/outgoing policy hooks, counters, and an
-isolated QEMU RTL8139 network path. The shell command is `ebpfw`; its backend is
-native C, with no Linux eBPF verifier, maps, helpers, or bytecode compatibility.
-The upstream Linux ebpfw binary is not included or executable here.
+isolated QEMU RTL8139 network path. The shell command is `ebpfw`; its backend
+executes actual eBPF instructions in a checked interpreter, including upstream
+ebpfw's XDP source-block function and shared rule matcher. `ebpfw bpf` reports
+program validation, instruction counts, and the compiled object's SHA-256.
+`ebpfw block from 192.0.2.1` installs an absolute source block enforced by the
+XDP receive hook. The Linux Go binary, Netfilter hooks, and connection tracking
+have not been ported. [Upstream attribution](net/bpf/UPSTREAM.md) identifies the
+exact code and revision.
 
 `make run` still starts without a network adapter. Use `make run-net` to attach
 an RTL8139 on a QEMU user network with a loopback-only UDP forwarding

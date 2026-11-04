@@ -1,5 +1,6 @@
 #include "network.h"
 #include "firewall.h"
+#include "fw_bpf.h"
 #include "../util.h"
 
 void net_print_number(uint32_t n) {
@@ -59,12 +60,16 @@ static bool service(char *text, FirewallRule *rule) {
 static void fw_status(void) {
     Firewall *fw = &native_firewall;
     sys_write("Native JordyOS firewall: "); sys_write(fw->enabled ? "enabled\n" : "disabled\n");
-    sys_write("Stateless IPv4; C backend; no Linux eBPF bytecode support.\n");
+    sys_write("Backend: eBPF interpreter; upstream ebpfw XDP + stateless policy.\n");
     sys_write("Defaults: incoming "); sys_write(fw->defaults[FW_IN] ? "allow" : "deny");
     sys_write(", outgoing "); sys_write(fw->defaults[FW_OUT] ? "allow\n" : "deny\n");
-    sys_write("Rules: "); net_print_number(fw->count); sys_write("/32 (first match wins)\n");
+    sys_write("Rules: "); net_print_number(fw->count); sys_write("/32 (blocks first; ordinary first match)\n");
     for (unsigned i = 0; i < fw->count; i++) {
         FirewallRule *r = &fw->rules[i];
+        if (r->block) {
+            net_print_number(i + 1); sys_write(" block from "); cidr(r->source, r->source_mask);
+            sys_write(" hits="); net_print_number(r->hits); sys_write("\n"); continue;
+        }
         net_print_number(i + 1); sys_write(r->allow ? " allow " : " deny ");
         sys_write(r->direction == FW_IN ? "in " : "out ");
         if (r->port) { net_print_number(r->port); sys_write("/"); }
@@ -74,11 +79,12 @@ static void fw_status(void) {
     }
 }
 static void help(void) {
-    sys_write("ebpfw: native stateless IPv4 firewall (no Linux BPF runtime)\n"
+    sys_write("ebpfw: interpreted eBPF/XDP; native stateless IPv4 adaptation\n"
         "  ebpfw enable | disable | status [numbered] | stats | doctor\n"
         "  ebpfw allow|deny [in|out] SERVICE [from CIDR] [to CIDR]\n"
         "  SERVICE: all, icmp, tcp, udp, PORT/tcp, PORT/udp\n"
         "  ebpfw default allow|deny incoming|outgoing\n"
+        "  ebpfw block from CIDR | bpf\n"
         "  ebpfw delete NUMBER | reset\n"
         "Omitted direction means in. Ports match destination, including out.\n"
         "ARP bypasses IP policy; IPv6/options/fragments are unsupported.\n"
@@ -89,6 +95,7 @@ void fw_command(char *arguments) {
     Firewall *fw = &native_firewall;
     if (!n || (n == 1 && !strcmp(w[0], "help"))) { help(); return; }
     if (n == 1 && !strcmp(w[0], "enable")) {
+        if (!fw_bpf_ready()) { sys_write("BPF program validation failed; firewall not enabled.\n"); return; }
         fw->enabled = true; sys_write("Native firewall enabled.\n"); return;
     }
     if (n == 1 && !strcmp(w[0], "disable")) {
@@ -102,10 +109,24 @@ void fw_command(char *arguments) {
             sys_write(d == FW_IN ? "in allowed=" : "out allowed="); net_print_number(fw->allowed[d]);
             sys_write(" denied="); net_print_number(fw->denied[d]); sys_write("\n");
         }
+        sys_write("bpf policy_runs="); net_print_number(firewall_bpf_stats.policy_runs);
+        sys_write(" xdp_runs="); net_print_number(firewall_bpf_stats.xdp_runs);
+        sys_write(" xdp_drops="); net_print_number(firewall_bpf_stats.xdp_drops);
+        sys_write(" faults="); net_print_number(firewall_bpf_stats.faults); sys_write("\n");
+        return;
+    }
+    if (n == 1 && !strcmp(w[0], "bpf")) {
+        sys_write(fw_bpf_ready() ? "BPF validation: passed\n" : "BPF validation: FAILED\n");
+        sys_write("eBPF instructions: policy="); net_print_number(fw_bpf_policy_size());
+        sys_write(" xdp="); net_print_number(fw_bpf_xdp_size()); sys_write("\n");
+        sys_write("ELF SHA256: "); sys_write(fw_bpf_hash()); sys_write("\n");
+        sys_write("Interpreter: 11 registers, 512B stack, checked memory, 65536-step limit.\n"
+            "Maps: arrays, map-of-maps, LPM; helper 1 (lookup). No JIT/Netfilter/conntrack.\n");
         return;
     }
     if (n == 1 && !strcmp(w[0], "doctor")) {
-        sys_write("Backend: native C, stateless IPv4. No Linux BPF facilities.\n");
+        sys_write("Backend: eBPF interpreter; upstream ebpfw XDP, stateless IPv4 policy.\n");
+        sys_write(fw_bpf_ready() ? "BPF validation: passed; XDP PASS/DROP hook installed.\n" : "BPF validation: FAILED.\n");
         sys_write(native_network.up ? "RTL8139: up, receive/transmit hooks active.\n" :
             "RTL8139: down; attach -device rtl8139 and run net up.\n");
         sys_write("Validation: IPv4/transport lengths and checksums; fragments/options rejected.\n"
@@ -121,6 +142,12 @@ void fw_command(char *arguments) {
         sys_write("Rule deleted.\n"); return;
     }
     bool allow;
+    if (n == 3 && !strcmp(w[0], "block") && !strcmp(w[1], "from")) {
+        FirewallRule rule = {.block = true};
+        if (!net_cidr(w[2], &rule.source, &rule.source_mask)) goto invalid;
+        if (!fw_add(fw, &rule)) { sys_write("Rule table full (32).\n"); return; }
+        sys_write("Rule added: "); net_print_number(fw->count); sys_write(" (XDP source block)\n"); return;
+    }
     if (n == 3 && !strcmp(w[0], "default") && action(w[1], &allow)) {
         unsigned d;
         if (!strcmp(w[2], "incoming")) d = FW_IN;

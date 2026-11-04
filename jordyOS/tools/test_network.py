@@ -201,6 +201,8 @@ try:
     lab.command("ebpfw doctor", "RTL8139: down")
     lab.command("net up", "RTL8139 up")
     lab.command("ebpfw doctor", "receive/transmit hooks active")
+    bpf = lab.command("ebpfw bpf", "BPF validation: passed")
+    assert all(int(n) > 100 for n in re.findall(r"(?:policy|xdp)=(\d+)", bpf)), bpf
     lab.command("ebpfw status", "disabled")
     # ARP works independently of IP filtering, so an IP deny cannot hide ARP failures.
     arp = struct.pack("!HHBBH", 1, 0x0800, 6, 4, 1) + PEER_MAC + PEER_IP + bytes(6) + GUEST_IP
@@ -254,7 +256,8 @@ try:
         "allow all from 256.1.2.3", "allow all from 192.0.2.0/33", "allow udp from",
         "allow udp from any from any", "allow udp to any extra", "enable extra", "disable extra",
         "default allow routed", "delete 0", "delete -1", "delete 9999999999999999999",
-        "allow udp a b c d e f g h i j"]
+        "allow udp a b c d e f g h i j", "block from", "block from 192.0.2.0/33",
+        "block from 2001:db8::/32", "block from 192.0.2.1 extra", "bpf extra"]
     for text in invalid_commands:
         lab.command("ebpfw " + text, "Invalid command; policy unchanged")
     lab.command("ebpfw status numbered", "Rules: 3/32")
@@ -294,6 +297,42 @@ try:
     lab.command("ebpfw status", "Rules: 32/32")
     lab.command("ebpfw reset", "firewall disabled")
     lab.command("ebpfw status", "Rules: 0/32")
+
+    # Actual upstream ebpfw XDP source blocking must run BEFORE policy parsing.
+    # An earlier ordinary allow cannot override an absolute source block.
+    lab.command("net echo on", "enabled")
+    lab.command("ebpfw allow 7777/udp", "Rule added: 1")
+    lab.command("ebpfw block from 192.0.2.1/32", "XDP source block")
+    lab.command("ebpfw enable", "enabled")
+    stats = lab.command("ebpfw stats", "faults=0")
+    runs = int(re.search(r"policy_runs=(\d+)", stats).group(1))
+    drops = int(re.search(r"xdp_drops=(\d+)", stats).group(1))
+    lab.denied(udp())
+    stats = lab.command("ebpfw stats", "faults=0")
+    assert int(re.search(r"policy_runs=(\d+)", stats).group(1)) == runs, stats
+    assert int(re.search(r"xdp_drops=(\d+)", stats).group(1)) == drops + 1, stats
+    lab.command("ebpfw status", "2 block from 192.0.2.1/32 hits=1")
+    lab.echo(udp(source=socket.inet_aton("192.0.2.3")))
+    lab.command("ebpfw block from 192.0.2.0/24", "XDP source block")
+    lab.denied(udp(source=socket.inet_aton("192.0.2.3")))
+    lab.denied(udp())
+    status = lab.command("ebpfw status", "3 block from 192.0.2.0/24 hits=1")
+    assert "2 block from 192.0.2.1/32 hits=2" in status, status
+    lab.command("ebpfw disable", "disabled")
+    lab.echo(udp())
+    lab.command("ebpfw enable", "enabled")
+    lab.command("ebpfw delete 2", "Rule deleted")
+    lab.denied(udp())  # Broader prefix still blocks.
+    lab.command("ebpfw delete 2", "Rule deleted")
+    lab.echo(udp())
+    lab.command("ebpfw block from 192.0.2.2", "XDP source block")
+    lab.denied(udp(), direction=1)  # Same source block is enforced on outgoing policy.
+    lab.command("ebpfw delete 2", "Rule deleted")
+    lab.echo(udp())
+    stats = lab.command("ebpfw stats", "faults=0")
+    assert int(re.search(r"policy_runs=(\d+)", stats).group(1)) > 100, stats
+    assert int(re.search(r"xdp_runs=(\d+)", stats).group(1)) > 100, stats
+    print("PASS actual upstream ebpfw XDP bytecode, pre-policy drops, LPM precedence, bypass and outgoing blocks")
     status = lab.command("net", "driver_errors=")
     assert "tx_dropped=0 driver_errors=0" in status, status
     print("PASS RX ring wrapping, MTU, NIC restart, listener toggle, bounded table and reset")

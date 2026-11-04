@@ -1,5 +1,6 @@
 #include "network.h"
 #include "firewall.h"
+#include "fw_bpf.h"
 #include "../util.h"
 
 Network native_network;
@@ -12,6 +13,8 @@ static bool peer_ip(uint32_t ip) {
 void net_receive(uint8_t *frame, size_t size) {
     native_network.received++;
     if (size < 14 || size > NET_FRAME_MAX) { native_network.invalid++; return; }
+    /* Actual upstream ebpfw XDP bytecode runs before Ethernet/IP handling. */
+    if (!fw_bpf_xdp(&native_firewall, frame, size)) return;
     static const uint8_t broadcast[6] = {255,255,255,255,255,255};
     bool local = !memcmp(frame, net_mac, 6);
     if ((!local && memcmp(frame, broadcast, 6)) || (frame[6] & 1)) {
