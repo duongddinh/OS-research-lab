@@ -8,6 +8,14 @@ See [the current build and usage guide](jordyOS/readme.md) for the reproducible
 Nix setup, QEMU commands, tests, and limitations. The Apelang compiler/VM is
 pinned as a Git submodule under `vendor/apelang`.
 
+The native firewall adds an `ebpfw` shell interface, an actual eBPF interpreter,
+upstream ebpfw's XDP source-block program, stateless eBPF IPv4 rules, and a
+polled RTL8139 packet path. See the
+[native firewall guide](jordyOS/net/README.md) for the isolated QEMU lab and
+its limits. The pinned upstream code is compiled to eBPF bytecode and runs
+inside JordyOS. The full Linux Go/Netfilter/stateful implementation is not
+ported; this is a bounded native adaptation with its own map/runtime ABI.
+
 The material below is the original research write-up. Addresses, toolchain,
 application implementation, and file limits in that historical description
 have been superseded by the current guide and source.

@@ -1,6 +1,7 @@
 #include "ape_platform.h"
 #include "../util.h"
 #include "../gui.h"
+#include "../net/network.h"
 
 void ape_paint(int x,int y,int w,int h,int color) { gui_paint(x,y,w,h,color); }
 void ape_drawtext(int x,int y,const char* text,int color) { gui_drawtext(x,y,text,color); }
@@ -26,7 +27,7 @@ void ape_wait(unsigned ms) {
         port_write(0x61,gate & ~3u); port_write(0x43,0xb0);
         port_write(0x42,count & 255); port_write(0x42,count>>8);
         port_write(0x61,(gate & ~2u)|1);
-        while (!(port_read(0x61)&0x20)) __asm__ volatile("pause");
+        while (!(port_read(0x61)&0x20)) { rtl_poll(); __asm__ volatile("pause"); }
     }
     port_write(0x61,gate);
 }
