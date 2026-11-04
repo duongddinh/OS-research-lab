@@ -4,6 +4,8 @@
 
 #include "util.h"
 #include "gui.h"
+#include "net/network.h"
+#include "net/firewall.h"
 
 static inline uint8_t inb(uint16_t p) {
   uint8_t r;
@@ -29,6 +31,7 @@ static void putc(char c) { serial_putc(c); gui_putc(c); }
 static void puts(const char* s) { while (*s) putc(*s++); }
 
 static char poll_ch(void) {
+  rtl_poll();
   static const char map[0x3A] = {
       0,   27,  '1', '2',  '3',  '4', '5', '6',  '7', '8', '9', '0',
       '-', '=', 8,   '\t', 'q',  'w', 'e', 'r',  't', 'y', 'u', 'i',
@@ -191,6 +194,7 @@ static int cur = -1;
 extern void ctx_switch(uint32_t **old_sp_ptr_location, uint32_t *new_sp);
 
 static void yield(void) {
+  rtl_poll();
   if (cur == -1) return;
   int p = cur;
   int n = (cur + 1) % MAX_TASKS;
@@ -332,6 +336,10 @@ static void shell(void) {
         !memcmp(shell_cmd_buffer, "apb ", 4) || !memcmp(shell_cmd_buffer, "compile ", 8)) {
       strcpy(ape_command, shell_cmd_buffer);
       task_create(app_ape, app_stack, sizeof app_stack);
+    } else if (!strcmp(shell_cmd_buffer, "ebpfw") || !memcmp(shell_cmd_buffer, "ebpfw ", 6)) {
+      fw_command(shell_cmd_buffer + (shell_cmd_buffer[5] ? 6 : 5));
+    } else if (!strcmp(shell_cmd_buffer, "net") || !memcmp(shell_cmd_buffer, "net ", 4)) {
+      net_command(shell_cmd_buffer + (shell_cmd_buffer[3] ? 4 : 3));
     } else if (!strcmp(shell_cmd_buffer, "ls")) {
       char files[MAX_FILES * (MAX_FILENAME_LEN + 1)];
       sys_list_files(files, sizeof(files)); sys_write(files); sys_write("\n");
@@ -342,6 +350,8 @@ static void shell(void) {
       desktop_mode=true;
     } else if (!strcmp(shell_cmd_buffer, "help")) {
       sys_write("Available commands:\n");
+      sys_write("  ebpfw help      - Native IPv4 firewall controls\n");
+      sys_write("  net             - Network status (net up to start RTL8139)\n");
       sys_write("  desktop         - Open graphical launcher\n");
       sys_write("  snake           - Play Snake (Apelang graphics)\n");
       sys_write("  history         - View project development dates\n");
@@ -377,6 +387,7 @@ void kmain(void) {
   gui_init();
   clear_screen_internal();
   fs_init();
+  net_init();
   ape_seed_files();
   puts("\n*** jordyOS multitask w/ In-Memory FS ***\n");
 

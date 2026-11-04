@@ -52,6 +52,8 @@ launcher. QEMU's serial port can also be used for commands and automation.
 | `ls` | List RAM files |
 | `desktop` | Open the desktop |
 | `clear` / `help` | Clear the terminal / show commands |
+| `ebpfw help` | Native stateless IPv4 firewall commands |
+| `net` | Network status; `net up` starts an attached RTL8139 |
 
 The editor supports `new <fn>`, `open <fn>`, `show`, `edit`, `save [fn]`,
 `list`, `delete <fn>`, and `quit`. In `edit` mode, enter text line by line;
@@ -84,6 +86,21 @@ sh> ape module.ape
 42
 MODULE PASS
 ```
+
+## Native firewall lab
+
+The [native firewall guide](net/README.md) describes the first JordyOS firewall
+milestone: ordered rules, incoming/outgoing policy hooks, counters, and an
+isolated QEMU RTL8139 network path. The shell command is `ebpfw`; its backend is
+native C, with no Linux eBPF verifier, maps, helpers, or bytecode compatibility.
+The upstream Linux ebpfw binary is not included or executable here.
+
+`make run` still starts without a network adapter. Use `make run-net` to attach
+an RTL8139 on a QEMU user network with a loopback-only UDP forwarding
+port. The guest interface starts down, the UDP listener starts off, and the
+firewall starts disabled. Configure rules and enable filtering before `net up`.
+Rules and counters are lost on reboot. IPv6, IP options, fragmentation,
+connection tracking, routing, NAT, and TCP connections are not implemented.
 
 ## Project history
 
@@ -161,14 +178,23 @@ and winning at the array bound. The emulator test starts/exits Snake and
 checks the game launcher. It also launches each Apelang
 app from the desktop and verifies return to the launcher.
 
+The same target runs native packet-decoder/policy tests and an isolated QEMU
+network test. The network test injects real Ethernet frames into the emulated
+RTL8139, checks ARP and ICMP/UDP responses, verifies drops in both directions,
+and exercises malformed input, rule bounds, and receive-ring wrapping. See the
+firewall guide for the individual test targets.
+
 The serial transcript is written to `/tmp/jordyos-smoke.log` by default.
 Set `QEMU` to choose another emulator binary and `SMOKE_LOG` for another log.
 
 ## Current limits
 
 This is an educational OS running trusted programs in kernel address space.
-There is no process isolation, paging, networking, persistent storage, or
-preemptive scheduling. All RAM files are lost when QEMU restarts. There are
+There is no process isolation, paging, general-purpose network stack, persistent
+storage, or preemptive scheduling. The optional network lab is limited to local
+IPv4 on one QEMU RTL8139, ARP, ICMP echo, and an opt-in UDP echo listener.
+Network polling depends on console/input loops, yields, and guest waits; a
+CPU-bound application can delay reception. All RAM files are lost when QEMU restarts. There are
 16 files, each limited to 16 KiB, with names up to 31 bytes. The built-in
 application scripts can be edited in RAM; rebuilding restores their source.
 
