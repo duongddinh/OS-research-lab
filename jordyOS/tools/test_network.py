@@ -60,7 +60,7 @@ class Lab:
         if os.environ.get("NETWORK_PCAP"):
             capture = ["-object", f"filter-dump,id=capture,netdev=lab,file={os.environ['NETWORK_PCAP']}"]
         self.p = subprocess.Popen([
-            os.environ.get("QEMU", "qemu-system-i386"), "-drive",
+            os.environ.get("QEMU", "qemu-system-x86_64"), "-cpu", "qemu64", "-drive",
             "if=floppy,format=raw,file=os.img", "-snapshot", "-boot", "a", "-m", "32",
             "-display", "none", "-monitor", "none", "-serial", "stdio", "-nic", "none",
             *backend, *capture, "-device",

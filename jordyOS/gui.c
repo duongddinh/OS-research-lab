@@ -44,7 +44,7 @@ void gui_drawtext(int x,int y,const char* label,int color) {
 }
 
 void gui_init(void) {
-    font=(const uint8_t*)(*(volatile uint32_t*)0x500);
+    font=(const uint8_t*)(uintptr_t)(*(volatile uint32_t*)0x500);
     static const uint8_t palette[][3]={
         {4,7,13},{8,12,20},{11,16,25},{30,38,45},{10,40,43},
         {24,58,47},{63,49,22},{57,60,63},{3,5,9},{12,27,34}

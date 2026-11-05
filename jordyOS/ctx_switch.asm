@@ -1,20 +1,21 @@
-; ctx_switch(old_sp_ptr, new_sp)
-BITS 32
+; SysV AMD64: ctx_switch(old_sp_ptr in RDI, new_sp in RSI).
+; Cooperative CALL boundary: save the six callee-saved integer registers.
+BITS 64
 GLOBAL ctx_switch
 ctx_switch:
-    ; save callee‑saved regs
-    push ebp
-    push ebx
-    push esi
-    push edi
-    ; *old_sp_ptr = current ESP
-    mov  esi, [esp+20]
-    mov  [esi], esp
-    ; load new ESP
-    mov  esp, [esp+24]
-    ; restore regs of next task
-    pop  edi
-    pop  esi
-    pop  ebx
-    pop  ebp
+    push rbp
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    mov [rdi], rsp
+    mov rsp, rsi
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    pop rbp
     ret
+SECTION .note.GNU-stack noalloc noexec nowrite progbits

@@ -41,6 +41,9 @@ bool rtl_up(void) {
             uint32_t bar = pci_read(slot, fn, 0x10);
             if (!(bar & 1) || (bar & ~3u) > 0xff00 || !(bar & ~3u)) return false;
             io = (uint16_t)(bar & ~3u);
+            /* This legacy NIC has 32-bit DMA addresses, even in a 64-bit OS. */
+            if ((uintptr_t)rx_ring > UINT32_MAX - sizeof rx_ring ||
+                (uintptr_t)tx_buffers > UINT32_MAX - sizeof tx_buffers) return false;
             uint16_t command = (uint16_t)pci_read(slot, fn, 4);
             /* A 16-bit write avoids clearing write-one-to-clear PCI status. */
             out16(0xcfc, command | 5); /* I/O decode + bus master */

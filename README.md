@@ -1,12 +1,18 @@
 # JordyOS with Apelang
 
-The current kernel boots to a small VGA desktop with Calculator, Editor,
+The current kernel runs in **64-bit x86 long mode** and boots to a small VGA desktop with Calculator, Editor,
 Apelang REPL, and Shell launchers. Calculator and Editor are Apelang programs;
 the C/assembly kernel supplies the graphics, input, memory, and file services.
 
 See [the current build and usage guide](jordyOS/readme.md) for the reproducible
 Nix setup, QEMU commands, tests, and limitations. The Apelang compiler/VM is
 pinned as a Git submodule under `vendor/apelang`.
+
+The BIOS loader enters through 16/32-bit bootstrap code, enables paging, and
+transfers to the x86-64 kernel. Applications still share ring 0 and a single
+32 MiB identity map. See the [64-bit architecture guide](jordyOS/ARCHITECTURE.md)
+for CPU requirements, the calling convention, memory layout, and limitations.
+Type `arch` in the guest shell to inspect the live mode and ABI checks.
 
 The native firewall adds an `ebpfw` shell interface, an actual eBPF interpreter,
 upstream ebpfw's XDP source-block program, stateless eBPF IPv4 rules, and a

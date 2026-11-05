@@ -34,7 +34,8 @@ void ape_wait(unsigned ms) {
 
 /* Single foreground runtime, 4 MiB arena. Split/coalesce blocks are reused by GC. */
 static unsigned char arena[4 * 1024 * 1024] __attribute__((aligned(16)));
-typedef struct Block { size_t size; struct Block* next; bool available; } Block;
+typedef struct Block { size_t size; struct Block* next; bool available; } __attribute__((aligned(16))) Block;
+typedef char HeapHeaderMustKeep16ByteAlignment[(sizeof(Block) % 16 == 0) ? 1 : -1];
 static Block* first;
 void ape_heap_reset(void) {
     first = (Block*)arena;
@@ -42,7 +43,7 @@ void ape_heap_reset(void) {
 }
 void* malloc(size_t size) {
     if (!first) ape_heap_reset();
-    if (size > sizeof(arena) - 16) return NULL;
+    if (size > sizeof(arena) - sizeof(Block)) return NULL;
     size = (size + 15) & ~(size_t)15;
     if (!size) size = 16;
     for (Block* b = first; b; b = b->next) {

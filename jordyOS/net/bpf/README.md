@@ -37,6 +37,8 @@ instruction counts, validation status, and object hash.
 
 The interpreter implements little-endian 8-byte eBPF instructions with eleven
 64-bit registers, immutable frame pointer r10, and a fresh 512-byte stack.
+The enclosing C kernel now runs in x86-64 long mode with 64-bit native
+integers and pointers; the eBPF instruction and map layouts remain unchanged.
 Supported operations include ALU32/64, wide immediates, unsigned division and
 modulo, signed/unsigned branches, JMP32, byte-order conversion, and MEM loads
 and stores of 1/2/4/8 bytes. Supported programs have at most 4096 instruction

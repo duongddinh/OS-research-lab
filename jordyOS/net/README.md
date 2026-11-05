@@ -1,6 +1,6 @@
 # Native JordyOS eBPF firewall
 
-This firewall executes actual eBPF bytecode inside the freestanding i686
+This firewall executes actual eBPF bytecode inside the freestanding x86-64
 JordyOS kernel. It includes [ebpfw](https://github.com/duongddinh/ebpfw)'s actual
 XDP source-block function and rule matcher, adapted from the pinned source
 identified in [UPSTREAM.md](bpf/UPSTREAM.md), with its GPL-2.0 license retained.
