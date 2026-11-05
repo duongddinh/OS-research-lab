@@ -7,6 +7,7 @@
 #include "net/network.h"
 #include "net/firewall.h"
 #include "arch.h"
+#include "isolation.h"
 
 static inline uint8_t inb(uint16_t p) {
   uint8_t r;
@@ -341,6 +342,8 @@ static void shell(void) {
       net_command(shell_cmd_buffer + (shell_cmd_buffer[3] ? 4 : 3));
     } else if (!strcmp(shell_cmd_buffer, "arch")) {
       arch_report();
+    } else if (!strcmp(shell_cmd_buffer, "isolation") || !memcmp(shell_cmd_buffer,"isolation ",10)) {
+      isolation_command(shell_cmd_buffer + (shell_cmd_buffer[9] ? 10 : 9));
     } else if (!strcmp(shell_cmd_buffer, "ls")) {
       char files[MAX_FILES * (MAX_FILENAME_LEN + 1)];
       sys_list_files(files, sizeof(files)); sys_write(files); sys_write("\n");
@@ -352,6 +355,7 @@ static void shell(void) {
     } else if (!strcmp(shell_cmd_buffer, "help")) {
       sys_write("Available commands:\n");
       sys_write("  arch            - CPU mode, paging and 64-bit ABI checks\n");
+      sys_write("  isolation test  - Exercise ring-3 memory/privilege protection\n");
       sys_write("  ebpfw help      - Native IPv4 firewall controls\n");
       sys_write("  net             - Network status (net up to start RTL8139)\n");
       sys_write("  desktop         - Open graphical launcher\n");
@@ -393,6 +397,7 @@ void kmain(void) {
     for (;;) __asm__ volatile("cli; hlt");
   }
   fs_init();
+  isolation_init();
   net_init();
   ape_seed_files();
   puts("\n*** JordyOS x86-64 / long mode ***\n");

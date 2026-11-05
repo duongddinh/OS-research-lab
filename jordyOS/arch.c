@@ -15,7 +15,7 @@ static uint64_t efer(void) {
 }
 static unsigned selector(void) { uint16_t cs; __asm__ volatile("mov %%cs,%0" : "=r"(cs)); return cs; }
 bool arch_ready(void) {
-    return selector() == 0x18 && (efer() & 0x500) == 0x500 &&
+    return selector() == 0x18 && (efer() & 0xd00) == 0xd00 &&
         (cr0() & 0x80010001u) == 0x80010001u && (cr4() & 0x620) == 0x620 && cr3() == 0x80000;
 }
 __attribute__((noinline)) static double add(double left, double right) { return left + right; }
@@ -32,5 +32,5 @@ void arch_report(void) {
     sys_write(arch_ready() ? "CPU: long mode active; CS=0x18; EFER.LMA=1\n" : "CPU: FAILED long-mode validation\n");
     sys_write("Paging: enabled; CR3=0x80000; shared 32 MiB identity map\n");
     sys_write(abi && aligned ? "ABI: PASS (SSE2, mixed varargs, 64-bit integers, heap alignment)\n" : "ABI: FAILED\n");
-    sys_write("Isolation: shared ring 0; no per-process address spaces\n");
+    sys_write("Isolation: apps ring 3 with private CR3; kernel shell ring 0\n");
 }

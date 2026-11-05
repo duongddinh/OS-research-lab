@@ -2,7 +2,6 @@
 #include "vm/vm.h"
 #include "compiler/compiler.h"
 #include "../util.h"
-#include "programs.h"
 #include "../gui.h"
 extern char ape_command[96];
 static char source[MAX_FILE_SIZE+1];
@@ -43,8 +42,4 @@ void app_ape(void) {
     if (vm.graphicsUsed) gui_terminal("JordyOS / Shell");
     freeVM(&vm);
     sys_write("Apelang finished.\n");
-}
-void ape_seed_files(void) {
-    for (size_t i=0;i<sizeof(embedded_programs)/sizeof(embedded_programs[0]);i++)
-        sys_write_file(embedded_programs[i].name,embedded_programs[i].source,embedded_programs[i].size);
 }

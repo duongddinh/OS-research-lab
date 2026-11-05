@@ -2,6 +2,7 @@
 BITS 16
 SECTION .entry
 GLOBAL _start
+GLOBAL gdt_start
 EXTERN kmain, __bss_start, __bss_end
 PML4 equ 0x80000
 PDPT equ 0x81000
@@ -61,8 +62,9 @@ protected_start:
     jb unsupported
     mov eax, 0x80000001
     cpuid
-    test edx, 1 << 29
-    jz unsupported
+    and edx, (1 << 29) | (1 << 20)
+    cmp edx, (1 << 29) | (1 << 20)
+    jne unsupported
 
     ; Three zeroed 4-KiB tables, sixteen supervisor RW 2-MiB leaf mappings.
     ; Identity-map physical 0..32 MiB, including VGA, DMA, kernel and RAM heap.
@@ -87,7 +89,7 @@ protected_start:
     mov cr3, eax
     mov ecx, 0xc0000080        ; EFER
     rdmsr
-    or eax, 1 << 8            ; LME
+    or eax, (1 << 8) | (1 << 11) ; LME + NXE
     wrmsr
     mov eax, cr0
     or eax, (1 << 31) | (1 << 16) ; paging + supervisor write-protect
@@ -160,11 +162,14 @@ gdt_start:
     dq 0x00cf9a000000ffff      ; 0x08: 32-bit bootstrap code
     dq 0x00cf92000000ffff      ; 0x10: data
     dq 0x00af9a000000ffff      ; 0x18: 64-bit code (L=1, D=0)
+    dq 0x00cff2000000ffff      ; 0x23: ring-3 data
+    dq 0x00affa000000ffff      ; 0x2b: ring-3 64-bit code
+    dq 0, 0                   ; 0x30: 64-bit TSS descriptor, initialized by C
 gdt_end:
 gdt_descriptor:
     dw gdt_end - gdt_start - 1
     dd gdt_start
 ALIGN 4
 initial_mxcsr dd 0x1f80
-unsupported_message db 'JordyOS requires an x86-64 CPU with SSE2.', 13, 10, 0
+unsupported_message db 'JordyOS requires an x86-64 CPU with SSE2 and NX.', 13, 10, 0
 SECTION .note.GNU-stack noalloc noexec nowrite progbits

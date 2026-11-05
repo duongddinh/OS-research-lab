@@ -53,7 +53,7 @@ class Boot(unittest.TestCase):
         process.stdin.write(b'arch\n'); process.stdin.flush()
         report = until(b'sh> ')
         for expected in ['pointers=64 bits; long=64 bits', 'EFER.LMA=1', 'ABI: PASS',
-                         'shared 32 MiB identity map', 'shared ring 0']:
+                         'shared 32 MiB identity map', 'apps ring 3 with private CR3']:
             self.assertIn(expected, report)
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as monitor:
             monitor.settimeout(3); monitor.connect(str(monitor_path))
@@ -73,7 +73,7 @@ class Boot(unittest.TestCase):
 
             registers = command('info registers')
             self.assertRegex(registers, r'CS\s*=0018.*CS64')
-            for name, mask in [('CR0', 0x80010001), ('CR4', 0x620), ('EFER', 0x500)]:
+            for name, mask in [('CR0', 0x80010001), ('CR4', 0x620), ('EFER', 0xd00)]:
                 match = re.search(name + r'=([0-9a-fA-F]+)', registers)
                 self.assertIsNotNone(match, registers)
                 self.assertEqual(int(match[1], 16) & mask, mask, registers)
@@ -95,10 +95,10 @@ class Boot(unittest.TestCase):
             self.assertEqual(leaves[16:], [0, 0])
 
     def test_unsupported_cpus_halt_cleanly(self):
-        for cpu in ['pentium3', 'qemu64,-lm', 'qemu64,-sse2']:
+        for cpu in ['pentium3', 'qemu64,-lm', 'qemu64,-sse2', 'qemu64,-nx']:
             with self.subTest(cpu=cpu):
                 process, _, until = self.start(cpu)
-                output = until(b'JordyOS requires an x86-64 CPU with SSE2.')
+                output = until(b'JordyOS requires an x86-64 CPU with SSE2 and NX.')
                 self.assertNotIn('JordyOS x86-64 / long mode', output)
                 self.assertIsNone(process.poll(), 'Guest should halt, not reset/triple fault')
 

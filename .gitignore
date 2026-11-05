@@ -9,4 +9,5 @@ result
 __pycache__/
 jordyOS/ape/programs.h
 jordyOS/net/bpf/programs.h
+jordyOS/user/image.h
 *.apb

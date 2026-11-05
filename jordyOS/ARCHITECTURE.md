@@ -1,7 +1,9 @@
 # JordyOS x86-64 architecture
 
-The C kernel, Apelang runtime, shell, desktop and eBPF interpreter now compile
-to native **x86-64** code. The BIOS loader still begins in 16-bit real mode;
+The C kernel, Apelang runtime, shell, desktop and eBPF interpreter compile
+to native **x86-64** code. The application runtime is a separate user ELF;
+Calculator/Editor/REPL/Snake/History execute in ring 3 with private page tables.
+The shell, desktop, drivers and eBPF hooks stay in ring 0. The BIOS loader still begins in 16-bit real mode;
 the brief 32-bit stage establishes long mode before any C code runs. The build
 produces an ELF64 x86-64 executable, extracts its raw load image, and places
 that image after the existing BIOS boot sector in `os.img`.
@@ -19,7 +21,7 @@ that image after the existing BIOS boot sector in `os.img`.
 The GDT retains a 32-bit bootstrap code selector `0x08` and data selector
 `0x10`; selector `0x18` is the 64-bit code descriptor (L=1, D=0). Paging and
 EFER.LME activate IA-32e mode, then the far jump loads the 64-bit descriptor.
-The startup checks MSR/PAE/FXSR/SSE/SSE2 and long-mode capability before using
+The startup checks MSR/PAE/FXSR/SSE/SSE2, NX and long-mode capability before using
 those facilities. Unsupported CPUs print a serial error and halt. There is
 no 32-bit fallback kernel or requirement for UEFI/GRUB/a host Linux kernel.
 
@@ -49,14 +51,15 @@ physical-frame allocator. Memory above 32 MiB is not discovered or mapped;
 giving QEMU more RAM does not make it available to applications. This is a
 64-bit execution/ABI conversion, not an implementation of high-memory support.
 
-Every leaf is supervisor-only, present, writable and executable. CR0.WP is
-enabled, but there are currently no read-only leaf mappings; NX is not enabled.
-The null page is mapped. All tasks run in ring 0 and use the same CR3. Paging
-therefore supplies the translation required by long mode without process
-isolation, W^X enforcement, guard pages or a userspace/kernel boundary. There
-is no installed exception-recovery framework; invalid accesses can still
-halt/reset the guest. These limitations are separate from the eBPF VM's
-checked virtual-memory model.
+Every bootstrap leaf is supervisor-only, present, writable and executable.
+CR0.WP and EFER.NXE are enabled. The kernel shell uses the bootstrap root at
+`0x80000`. Each application uses a private root that retains those low kernel
+mappings as supervisor-only and adds its own 4 KiB user pages starting at
+`0x40000000`. User code is RX, constants/startup are read-only and NX, and
+heap/stack are RW and NX. A guard page precedes the user stack. A null access
+from ring 3 is denied by the supervisor-only low map. User faults return to
+the shell through the TSS/IDT entry path; kernel faults halt. Details and
+limits are in [ISOLATION.md](ISOLATION.md).
 
 ## Compiler and task ABI
 
@@ -72,13 +75,14 @@ retain their defined widths.
 loads the next stack, restores those registers and returns. New task frames
 contain six saved registers, the trampoline entry and a dummy return slot so
 the trampoline starts with RSP modulo 16 equal to 8. Stacks are explicitly
-16-byte aligned. The shell has a 16 KiB stack; application tasks have 64 KiB.
+16-byte aligned. The shell has a 16 KiB stack; trusted launchers have 64 KiB,
+and each isolated application has a guarded 256 KiB user stack.
 
 This is cooperative switching at a normal function-call boundary. XMM data
 registers are caller-saved under this ABI; C callers preserve live values
-around the switch. No per-task FPU/control-state context is maintained: all
-trusted tasks retain the default x87/MXCSR control settings. Interrupt-driven
-preemption would need additional state saving, interrupts and scheduling work.
+around the trusted kernel switch. Ring-3 transitions additionally save/restore
+FPU/XMM state and prevent user MXCSR/DF settings from affecting kernel work.
+Interrupt-driven preemption is still unimplemented.
 
 The arena's allocation headers are aligned/sized to a multiple of 16 bytes,
 so returned heap pointers retain the ABI alignment after splitting blocks.
@@ -110,10 +114,12 @@ nix develop --command make -C jordyOS test-network-user
 
 The default suite checks live CS/CR0/CR3/CR4/EFER state and physical page-table
 entries through QEMU's monitor, the guest ABI probe, and clean rejection of
-Pentium III / long-mode-disabled / SSE2-disabled CPU models. It also exercises
+Pentium III / long-mode-disabled / SSE2-disabled / NX-disabled CPU models. It also exercises
 all existing desktop, Apelang, editor, Snake, packet, eBPF and XDP behavior.
 The image builder checks ELF64, EM_X86_64, the entry address, boot signature,
 and load-size bound. `make test-boot` runs only the architectural checks.
+`make test-isolation` checks native user faults, private CR3/physical frames,
+user page permissions, syscall validation, and recovery to healthy applications.
 
 References: [Intel system-programming manuals](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html),
 [System V x86-64 psABI](https://gitlab.com/x86-psABIs/x86-64-ABI).

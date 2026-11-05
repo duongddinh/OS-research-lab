@@ -58,8 +58,10 @@ and store is translated and checked against context, packet, stack, or one
 map value. Packet/context/policy values are read-only; stack and stats values
 are writable. An access cannot cross an individual map value's boundary.
 Stack/register contents start at zero. This provides runtime confinement for
-the built-in programs; trusted kernel applications still share the enclosing
-address space, so the OS itself remains outside a security sandbox.
+the built-in programs. The interpreter itself is trusted kernel code; its
+software checks are separate from the ring-3 application isolation described
+in [ISOLATION.md](../../ISOLATION.md). This is not a claim that the whole kernel
+is protected from kernel bugs or microarchitectural side channels.
 
 The XDP context uses the six 32-bit `xdp_md` fields and standard PASS=2/DROP=1
 verdicts. This is a JordyOS driver-side XDP-compatible hook, not Linux's XDP

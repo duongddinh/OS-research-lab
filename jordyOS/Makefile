@@ -8,12 +8,35 @@ export QEMU
 APELANG_DIR ?= ../vendor/apelang
 CFLAGS = --target=x86_64-none-elf -march=x86-64 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -fno-pie -mno-red-zone -mcmodel=small -fno-asynchronous-unwind-tables -O2 -Wall -Wextra -Wno-unused-parameter -std=c99
 APEFLAGS = $(CFLAGS) -DAPE_FREESTANDING -Iape -I$(APELANG_DIR)/src
-OBJS = kernel_entry.o ctx_switch.o kernel.o gui.o arch.o ape/platform.o ape/app_ape.o ape/compiler.o ape/lexer.o ape/vm.o net/packet.o net/firewall.o net/command.o net/network.o net/rtl8139.o net/bpf_vm.o net/fw_bpf.o
+OBJS = kernel_entry.o ctx_switch.o interrupts.o kernel.o gui.o arch.o isolation.o ape/platform.o ape/seed.o net/packet.o net/firewall.o net/command.o net/network.o net/rtl8139.o net/bpf_vm.o net/fw_bpf.o
+USER_OBJS = user/start.o user/main.o user/syscalls.o user/lib.o user/platform.o user/app_ape.o user/compiler.o user/lexer.o user/vm.o
+USERFLAGS = $(APEFLAGS) -DJORDY_USER
 all: os.img
 kernel_entry.o: kernel_entry.asm
 	$(NASM) -f elf64 $< -o $@
 ctx_switch.o: ctx_switch.asm
 	$(NASM) -f elf64 $< -o $@
+interrupts.o: interrupts.asm
+	$(NASM) -f elf64 $< -o $@
+user/start.o: user/start.asm
+	$(NASM) -f elf64 $< -o $@
+user/%.o: user/%.c
+	$(CC) $(USERFLAGS) -MMD -MP -c $< -o $@
+user/platform.o: ape/platform.c
+	$(CC) $(USERFLAGS) -MMD -MP -c $< -o $@
+user/app_ape.o: ape/app_ape.c
+	$(CC) $(USERFLAGS) -MMD -MP -c $< -o $@
+user/compiler.o: $(APELANG_DIR)/src/compiler/compiler.c
+	$(CC) $(USERFLAGS) -MMD -MP -c $< -o $@
+user/lexer.o: $(APELANG_DIR)/src/lexer/lexer.c
+	$(CC) $(USERFLAGS) -MMD -MP -c $< -o $@
+user/vm.o: $(APELANG_DIR)/src/vm/vm.c
+	$(CC) $(USERFLAGS) -MMD -MP -c $< -o $@
+user/runtime.elf: user/linker.ld $(USER_OBJS)
+	$(LD) -m elf_x86_64 -T user/linker.ld -o $@ $(USER_OBJS)
+user/image.h: user/runtime.elf tools/embed_user.py
+	python3 tools/embed_user.py $< $@
+isolation.o: user/image.h
 %.o: %.c
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 net/bpf/program.bpf.o: net/bpf/program.bpf.c net/bpf/ebpfw_shared.h net/bpf/ebpfw_early.h Makefile
@@ -25,13 +48,7 @@ ape/platform.o: ape/platform.c
 	$(CC) $(APEFLAGS) -MMD -MP -c $< -o $@
 ape/programs.h: programs $(wildcard programs/*.ape) tools/embed.py
 	python3 tools/embed.py
-ape/app_ape.o: ape/app_ape.c ape/programs.h
-	$(CC) $(APEFLAGS) -MMD -MP -c $< -o $@
-ape/compiler.o: $(APELANG_DIR)/src/compiler/compiler.c
-	$(CC) $(APEFLAGS) -MMD -MP -c $< -o $@
-ape/lexer.o: $(APELANG_DIR)/src/lexer/lexer.c
-	$(CC) $(APEFLAGS) -MMD -MP -c $< -o $@
-ape/vm.o: $(APELANG_DIR)/src/vm/vm.c
+ape/seed.o: ape/seed.c ape/programs.h
 	$(CC) $(APEFLAGS) -MMD -MP -c $< -o $@
 kernel.elf: linker.ld $(OBJS)
 	$(LD) -m elf_x86_64 -T linker.ld -o $@ $(OBJS)
@@ -59,10 +76,13 @@ test-network-user: os.img
 	python3 tools/test_network.py --user
 test-boot: os.img
 	python3 tools/test_boot.py
-test: os.img test-boot test-snake test-firewall test-network
+test-isolation: os.img
+	python3 tools/test_embed_user.py
+	python3 tools/test_isolation.py
+test: os.img test-boot test-isolation test-snake test-firewall test-network
 	python3 tools/smoke.py
 clean:
-	rm -f $(OBJS) $(OBJS:.o=.d) *.bin *.elf os.img ape/programs.h net/bpf/programs.h net/bpf/program.bpf.o
--include $(OBJS:.o=.d)
-.PHONY: all run run-net test test-boot test-snake test-firewall test-network test-network-user clean
-$(OBJS): Makefile
+	rm -f $(OBJS) $(OBJS:.o=.d) $(USER_OBJS) $(USER_OBJS:.o=.d) *.bin *.elf os.img ape/programs.h net/bpf/programs.h net/bpf/program.bpf.o user/runtime.elf user/image.h
+-include $(OBJS:.o=.d) $(USER_OBJS:.o=.d)
+.PHONY: all run run-net test test-boot test-isolation test-snake test-firewall test-network test-network-user clean
+$(OBJS) $(USER_OBJS): Makefile
