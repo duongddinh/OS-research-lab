@@ -1,7 +1,11 @@
 #include "ape_platform.h"
 #include "../util.h"
 #include "../gui.h"
+#ifdef JORDY_USER
+#include "../user/syscalls.h"
+#else
 #include "../net/network.h"
+#endif
 
 void ape_paint(int x,int y,int w,int h,int color) { gui_paint(x,y,w,h,color); }
 void ape_drawtext(int x,int y,const char* text,int color) { gui_drawtext(x,y,text,color); }
@@ -12,6 +16,9 @@ const char* ape_key(void) {
     if (c==27) return "escape"; if (c=='\n') return "enter";
     text[0]=c; text[1]=0; return text;
 }
+#ifdef JORDY_USER
+void ape_wait(unsigned ms) { user_wait(ms); }
+#else
 static void port_write(uint16_t port,uint8_t value) {
     __asm__ volatile("outb %0,%1" : : "a"(value),"Nd"(port));
 }
@@ -31,10 +38,12 @@ void ape_wait(unsigned ms) {
     }
     port_write(0x61,gate);
 }
+#endif
 
 /* Single foreground runtime, 4 MiB arena. Split/coalesce blocks are reused by GC. */
 static unsigned char arena[4 * 1024 * 1024] __attribute__((aligned(16)));
-typedef struct Block { size_t size; struct Block* next; bool available; } Block;
+typedef struct Block { size_t size; struct Block* next; bool available; } __attribute__((aligned(16))) Block;
+typedef char HeapHeaderMustKeep16ByteAlignment[(sizeof(Block) % 16 == 0) ? 1 : -1];
 static Block* first;
 void ape_heap_reset(void) {
     first = (Block*)arena;
@@ -42,7 +51,7 @@ void ape_heap_reset(void) {
 }
 void* malloc(size_t size) {
     if (!first) ape_heap_reset();
-    if (size > sizeof(arena) - 16) return NULL;
+    if (size > sizeof(arena) - sizeof(Block)) return NULL;
     size = (size + 15) & ~(size_t)15;
     if (!size) size = 16;
     for (Block* b = first; b; b = b->next) {
@@ -81,8 +90,13 @@ void* calloc(size_t count, size_t size) {
     return p;
 }
 void exit(int status) {
-    (void)status; sys_write("\nApelang stopped: runtime allocation or I/O failure.\n");
+    sys_write("\nApelang stopped: runtime allocation or I/O failure.\n");
+#ifdef JORDY_USER
+    user_exit(status);
+#else
+    (void)status;
     sys_exit_task(); for (;;) __asm__ volatile("hlt");
+#endif
 }
 int memcmp(const void* left, const void* right, size_t size) {
     const unsigned char *a=left, *b=right;

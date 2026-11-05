@@ -5,8 +5,8 @@ import selectors
 import subprocess
 import time
 
-qemu=os.environ.get("QEMU", "qemu-system-i386")
-p=subprocess.Popen([qemu,"-drive","if=floppy,format=raw,file=os.img","-snapshot",
+qemu=os.environ.get("QEMU", "qemu-system-x86_64")
+p=subprocess.Popen([qemu,"-cpu","qemu64","-drive","if=floppy,format=raw,file=os.img","-snapshot",
     "-boot","a","-m","32","-display","none","-monitor","none","-serial","stdio",
     "-nic","none","-no-reboot"],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 selector=selectors.DefaultSelector(); selector.register(p.stdout,selectors.EVENT_READ)
@@ -29,6 +29,8 @@ def command(line,expected,marker=b"sh> "):
 try:
     until(b"desktop> ")
     p.stdin.write(b"4"); p.stdin.flush(); until(b"sh> ")
+    command("arch", "CPU: long mode active; CS=0x18; EFER.LMA=1")
+    command("arch", "ABI: PASS")
     command("ape demo.ape","DEMO PASS")
     command("compile helper.ape","Compiled: helper.apb")
     command("ape module.ape","42\nMODULE PASS")

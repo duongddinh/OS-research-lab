@@ -1,11 +1,15 @@
 # JordyOS desktop and Apelang
 
-JordyOS is a BIOS-booted 32-bit x86 research OS. Its native 320x200 VGA desktop
+JordyOS is a BIOS-booted 64-bit x86 research OS. Its native 320x200 VGA desktop
 launches Calculator, Editor, the Apelang REPL, Snake, and a shell. Calculator,
 Editor, and Snake are written in Apelang, in `programs/calc.ape`,
 `programs/edit.ape`, and `programs/snake.ape`. A fourth Apelang application,
 `programs/history.ape`, shows the project timeline.
 The original C app sources are kept as historical examples and are not linked.
+The Apelang compiler/runtime and these applications execute in ring 3 with
+private page tables. Kernel, peer-memory and device access are blocked by the
+CPU; input, graphics and RAM files use checked system calls. See
+[ISOLATION.md](ISOLATION.md) for the boundary and its current limits.
 
 ## Build and run
 
@@ -23,7 +27,8 @@ make -C jordyOS run
 
 The branch containing this integration must be checked out until it is merged.
 `flake.lock` pins NASM, LLVM/Clang, LLD, QEMU, Python, and Make. `JORDY_CC`
-selects the unwrapped compiler for the freestanding i686 target. No Homebrew
+selects the unwrapped compiler for the freestanding x86_64 target. QEMU uses
+`qemu-system-x86_64 -cpu qemu64`. No Homebrew
 cross-compiler or machine-wide installation is required.
 
 ## Desktop
@@ -54,6 +59,8 @@ launcher. QEMU's serial port can also be used for commands and automation.
 | `clear` / `help` | Clear the terminal / show commands |
 | `ebpfw help` | Native stateless IPv4 firewall commands |
 | `net` | Network status; `net up` starts an attached RTL8139 |
+| `arch` | Live long-mode/paging status, pointer width, and ABI self-test |
+| `isolation` / `isolation test` | Isolation status / hardware fault and recovery checks |
 
 The editor supports `new <fn>`, `open <fn>`, `show`, `edit`, `save [fn]`,
 `list`, `delete <fn>`, and `quit`. In `edit` mode, enter text line by line;
@@ -158,14 +165,24 @@ entering protected mode. The kernel sets a small color palette and draws the
 desktop and terminal into the framebuffer at `0xa0000`. The font API is
 specified in the [IBM BIOS technical reference](https://www.ardent-tool.com/docs/pdf/PS2_and_PC_BIOS_Interface_Technical_Reference_Apr87.pdf).
 
-The entry code enables A20, initializes x87 floating point, clears BSS above
-1 MiB, and enters C. The runtime has a reusable 4 MiB heap with split/coalesce
-allocation, a 64 KiB task stack, and the actual Apelang compiler/lexer/VM
-compiled from the pinned submodule. Apelang bytecode runs on the guest CPU.
+The entry code enables A20, checks CPU capabilities, enters 32-bit protected
+mode, builds a four-level page-table hierarchy using 2 MiB leaf pages, enables
+long mode, and transfers to 64-bit code. It initializes x87/SSE2, clears BSS
+above 1 MiB, and calls the x86-64 C kernel with a correctly aligned stack.
+Each user runtime has a reusable private 4 MiB heap with 16-byte-aligned
+allocations and a guarded 256 KiB user stack. The trusted kernel launcher
+retains a 64 KiB stack and the shell has 16 KiB. The actual Apelang
+compiler/lexer/VM compiled from the pinned submodule. Apelang bytecode runs
+inside the 64-bit guest's ring-3 process. [ARCHITECTURE.md](ARCHITECTURE.md)
+explains the boot stages, ELF64 builds, calling convention, and paging layout.
 
 The serial console enables repeatable integration tests. The foreground app
 owns console input until it exits; the shell cannot steal its keystrokes.
 Task startup uses a trampoline so returning from an app exits it safely.
+The context switch preserves the six SysV AMD64 callee-saved integer
+registers and 64-bit stack pointers. User entry/exit uses a separate interrupt
+gate, TSS kernel stack, and saved floating-point state. Only one foreground
+user application runs at a time; there is no timer-driven preemption.
 
 ## Validation
 
@@ -183,6 +200,19 @@ and winning at the array bound. The emulator test starts/exits Snake and
 checks the game launcher. It also launches each Apelang
 app from the desktop and verifies return to the launcher.
 
+`test-boot` inspects the live CPU's CS/CR0/CR3/CR4/EFER registers and physical
+page-table entries, checks the shell's mixed integer/floating-point ABI probe,
+and verifies clean rejection of Pentium III, long-mode-disabled, and
+SSE2-disabled and NX-disabled CPU models. The image builder rejects kernels that are not
+ELF64 x86-64 executables. `make -C jordyOS test-boot` runs these checks alone.
+
+`test-isolation` runs native ring-3 code that attempts forbidden kernel/peer
+reads and writes, HLT, port I/O, CR3 access, code writes, data execution,
+null/stack-guard accesses, and invalid system-call pointers. It checks actual
+CPU exceptions and private page tables, then runs healthy applications after
+the faults. `make -C jordyOS test-isolation` runs this group alone. Its serial
+transcript defaults to `/tmp/jordyos-isolation.log` (`ISOLATION_LOG` override).
+
 The same target runs native packet-decoder/policy tests and an isolated QEMU
 network test. The network test injects real Ethernet frames into the emulated
 RTL8139, checks ARP and ICMP/UDP responses, verifies drops in both directions,
@@ -194,18 +224,25 @@ Set `QEMU` to choose another emulator binary and `SMOKE_LOG` for another log.
 
 ## Current limits
 
-This is an educational OS running trusted programs in kernel address space.
-There is no process isolation, paging, general-purpose network stack, persistent
-storage, or preemptive scheduling. The optional network lab is limited to local
+This is an educational OS with CPU-enforced memory and privilege isolation for
+Apelang application processes. Each launch gets private code, data, heap,
+stack and page tables; memory faults terminate that process and return to the
+kernel. The kernel shell, drivers and services remain privileged. Kernel
+identity-mapped pages are still writable/executable; kernel faults halt the
+guest. There is no per-user file access control, preemptive scheduling,
+general-purpose network stack, persistent storage or dynamic native loader.
+The shared RAM filesystem and display remain intentional services. The
+optional network lab is limited to local
 IPv4 on one QEMU RTL8139, ARP, ICMP echo, and an opt-in UDP echo listener.
 Network polling depends on console/input loops, yields, and guest waits; a
 CPU-bound application can delay reception. All RAM files are lost when QEMU restarts. There are
 16 files, each limited to 16 KiB, with names up to 31 bytes. The built-in
 application scripts can be edited in RAM; rebuilding restores their source.
 
-A guest execution has a five-million-instruction budget so an accidental
-infinite loop returns to the launcher or REPL. The heap and filesystem are
-bounded, but the VM is not a security sandbox. Font/input handling is ASCII
+A guest language execution has a five-million-instruction budget so an accidental
+Apelang loop returns to the launcher or REPL. Memory isolation does not add
+native CPU time limits or protect against bugs in privileged kernel services.
+Font/input handling is ASCII
 with a US keyboard layout. Numbers print with six significant digits; Unicode and terminal escape sequences are not implemented.
 
 A browser demo on cytizennetworks.com is a separate follow-up: it needs an

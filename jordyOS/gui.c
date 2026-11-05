@@ -6,7 +6,7 @@
 static volatile uint8_t* const pixels=(uint8_t*)0xa0000;
 static const uint8_t* font;
 static int row, column;
-static const char* terminal_title="JordyOS / Shell";
+static char terminal_title[38]="JordyOS / Shell";
 enum { NAVY, PANEL, CARD, MUTED, TEAL, MINT, GOLD, WHITE, INK, SELECTED };
 static void outb(uint16_t port,uint8_t value) {
     __asm__ volatile("outb %0,%1" : : "a"(value),"Nd"(port));
@@ -44,7 +44,7 @@ void gui_drawtext(int x,int y,const char* label,int color) {
 }
 
 void gui_init(void) {
-    font=(const uint8_t*)(*(volatile uint32_t*)0x500);
+    font=(const uint8_t*)(uintptr_t)(*(volatile uint32_t*)0x500);
     static const uint8_t palette[][3]={
         {4,7,13},{8,12,20},{11,16,25},{30,38,45},{10,40,43},
         {24,58,47},{63,49,22},{57,60,63},{3,5,9},{12,27,34}
@@ -58,7 +58,11 @@ void gui_clear(void) {
     rect(0,191,320,9,PANEL);text(8,192,"JordyOS  /  Apelang runtime",MUTED,PANEL);
     row=column=0;
 }
-void gui_terminal(const char* title) { terminal_title=title;gui_clear(); }
+void gui_terminal(const char* title) {
+    strncpy(terminal_title,title,sizeof terminal_title-1);
+    terminal_title[sizeof terminal_title-1]=0;
+    gui_clear();
+}
 void gui_putc(char c) {
     rect(8+column*8,24+row*8,8,8,INK);
     if (c=='\b') { if (column>0) column--;rect(8+column*8,24+row*8,8,8,INK); }

@@ -6,6 +6,8 @@
 #include "gui.h"
 #include "net/network.h"
 #include "net/firewall.h"
+#include "arch.h"
+#include "isolation.h"
 
 static inline uint8_t inb(uint16_t p) {
   uint8_t r;
@@ -186,12 +188,12 @@ static int fs_find_empty_slot(void) {
 
 #define MAX_TASKS 6
 typedef struct {
-  uint32_t *sp;
+  uintptr_t *sp;
   void (*entry)(void);
 } task_t;
 static task_t tasks[MAX_TASKS];
 static int cur = -1;
-extern void ctx_switch(uint32_t **old_sp_ptr_location, uint32_t *new_sp);
+extern void ctx_switch(uintptr_t **old_sp_ptr_location, uintptr_t *new_sp);
 
 static void yield(void) {
   rtl_poll();
@@ -200,8 +202,8 @@ static void yield(void) {
   int n = (cur + 1) % MAX_TASKS;
   while (tasks[n].sp == NULL && n != p) n = (n + 1) % MAX_TASKS;
   if (tasks[n].sp == NULL || n == p) return;
-  uint32_t **o;
-  uint32_t *d;
+  uintptr_t **o;
+  uintptr_t *d;
   if (tasks[p].sp == NULL)
     o = &d;
   else
@@ -229,12 +231,10 @@ static void task_create(void (*fn)(void), uint8_t *s_bot,
         break;
       }
   if (si != -1) {
-    uint32_t *sp = (uint32_t *)(s_bot + s_sz);
-    *(--sp) = (uint32_t)task_bootstrap;
-    *(--sp) = 0;
-    *(--sp) = 0;
-    *(--sp) = 0;
-    *(--sp) = 0;
+    uintptr_t *sp = (uintptr_t *)(s_bot + s_sz);
+    *(--sp) = 0; /* Trampoline entry has RSP % 16 == 8, as after a real CALL. */
+    *(--sp) = (uintptr_t)task_bootstrap;
+    for (unsigned i = 0; i < 6; i++) *(--sp) = 0; /* RBP/RBX/R12-R15 */
     tasks[si].sp = sp;
     tasks[si].entry = fn;
   } else
@@ -340,6 +340,10 @@ static void shell(void) {
       fw_command(shell_cmd_buffer + (shell_cmd_buffer[5] ? 6 : 5));
     } else if (!strcmp(shell_cmd_buffer, "net") || !memcmp(shell_cmd_buffer, "net ", 4)) {
       net_command(shell_cmd_buffer + (shell_cmd_buffer[3] ? 4 : 3));
+    } else if (!strcmp(shell_cmd_buffer, "arch")) {
+      arch_report();
+    } else if (!strcmp(shell_cmd_buffer, "isolation") || !memcmp(shell_cmd_buffer,"isolation ",10)) {
+      isolation_command(shell_cmd_buffer + (shell_cmd_buffer[9] ? 10 : 9));
     } else if (!strcmp(shell_cmd_buffer, "ls")) {
       char files[MAX_FILES * (MAX_FILENAME_LEN + 1)];
       sys_list_files(files, sizeof(files)); sys_write(files); sys_write("\n");
@@ -350,6 +354,8 @@ static void shell(void) {
       desktop_mode=true;
     } else if (!strcmp(shell_cmd_buffer, "help")) {
       sys_write("Available commands:\n");
+      sys_write("  arch            - CPU mode, paging and 64-bit ABI checks\n");
+      sys_write("  isolation test  - Exercise ring-3 memory/privilege protection\n");
       sys_write("  ebpfw help      - Native IPv4 firewall controls\n");
       sys_write("  net             - Network status (net up to start RTL8139)\n");
       sys_write("  desktop         - Open graphical launcher\n");
@@ -386,12 +392,17 @@ void kmain(void) {
   serial_init();
   gui_init();
   clear_screen_internal();
+  if (!arch_ready()) {
+    puts("64-bit architecture initialization failed. Halting.\n");
+    for (;;) __asm__ volatile("cli; hlt");
+  }
   fs_init();
+  isolation_init();
   net_init();
   ape_seed_files();
-  puts("\n*** jordyOS multitask w/ In-Memory FS ***\n");
+  puts("\n*** JordyOS x86-64 / long mode ***\n");
 
-  static uint8_t sh_stack[4096];
+  static uint8_t sh_stack[16384] __attribute__((aligned(16)));
   task_create(shell, sh_stack, sizeof sh_stack);
   cur = -1;
   for (int i = 0; i < MAX_TASKS; ++i)
@@ -403,7 +414,7 @@ void kmain(void) {
     puts("Error: No initial task. Halting.\n");
     for (;;) __asm__("hlt");
   }
-  uint32_t *dummy_sp_kmain = NULL;
+  uintptr_t *dummy_sp_kmain = NULL;
   ctx_switch(&dummy_sp_kmain, tasks[cur].sp);
 
   puts("\nkmain: ctx_switch from initial task returned. Halting.\n");

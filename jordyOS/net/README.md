@@ -1,6 +1,6 @@
 # Native JordyOS eBPF firewall
 
-This firewall executes actual eBPF bytecode inside the freestanding i686
+This firewall executes actual eBPF bytecode inside the freestanding x86-64
 JordyOS kernel. It includes [ebpfw](https://github.com/duongddinh/ebpfw)'s actual
 XDP source-block function and rule matcher, adapted from the pinned source
 identified in [UPSTREAM.md](bpf/UPSTREAM.md), with its GPL-2.0 license retained.
@@ -170,7 +170,10 @@ has been tested against QEMU, not physical RTL8139 hardware.
 Polling runs from keyboard/serial input, task yields, and guest timer waits.
 A long application computation without these calls can delay reception and
 overflow the NIC ring. This is cooperative research code, not a production
-security boundary. Trusted apps share kernel memory and can modify policy.
+security boundary. The kernel shell and services remain privileged. Apelang
+applications now use ring-3 memory isolation and reach the network's polling
+path through checked input/wait system calls; they cannot access NIC registers,
+kernel memory or firewall administration directly.
 
 ## Validation
 

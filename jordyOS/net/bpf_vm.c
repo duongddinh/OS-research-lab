@@ -108,7 +108,7 @@ static bool lookup(BpfEnvironment *e, uint8_t *stack, uint64_t handle, uint64_t 
     return true;
 }
 static uint64_t divide(uint64_t n, uint64_t d, bool remainder) {
-    /* Avoid compiler-rt's 64-bit division dependency in the i686 kernel. */
+    /* Bounded unsigned division without a freestanding compiler-runtime dependency. */
     if (!d) return remainder ? n : 0;
     uint64_t q = 0, r = 0;
     for (unsigned i = 64; i; i--) {
