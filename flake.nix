@@ -6,7 +6,7 @@
   in { devShells = nixpkgs.lib.genAttrs systems (system: let
     pkgs = import nixpkgs { inherit system; };
   in { default = pkgs.mkShell {
-    packages = with pkgs; [ clang llvm lld nasm qemu python3 gnumake git ];
+    packages = with pkgs; [ clang llvm lld nasm qemu python3 gnumake git actionlint ];
     JORDY_CC = "${pkgs.llvmPackages.clang-unwrapped}/bin/clang";
     shellHook = "export CC=clang";
   }; }); };
