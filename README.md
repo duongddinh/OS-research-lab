@@ -8,6 +8,11 @@ See [the current build and usage guide](jordyOS/readme.md) for the reproducible
 Nix setup, QEMU commands, tests, and limitations. The Apelang compiler/VM is
 pinned as a Git submodule under `vendor/apelang`.
 
+`make -C jordyOS iso` creates `jordyOS/jordyos.iso`, a BIOS-bootable live CD.
+See [VM setup and compatibility](jordyOS/VIRTUAL_MACHINES.md) for VirtualBox,
+VMware and QEMU. CD boot is verified in QEMU; VirtualBox/VMware on Intel/AMD
+are unverified, and their Apple Silicon versions cannot run this x86-64 guest.
+
 TCP LARP's portable congestion-control core is also pinned as a Git submodule
 under `vendor/tcplarp` and compiled natively into the kernel. Run `larp test`
 to exercise the upstream algorithm with synthetic feedback. The native TCP
@@ -31,6 +36,14 @@ polled RTL8139 packet path. See the
 its limits. The pinned upstream code is compiled to eBPF bytecode and runs
 inside JordyOS. The full Linux Go/Netfilter/stateful implementation is not
 ported; this is a bounded native adaptation with its own map/runtime ABI.
+The upstream repository is pinned under `vendor/ebpfw`; supported code is
+derived from that submodule during the build.
+
+The [JordyOS test workflow](.github/workflows/jordyos-tests.yml) runs on pull
+requests or manually, using the pinned Nix environment and all three
+submodules. It covers the native and QEMU suites, CD boot, and real Linux TCP
+interoperability under loss/delay. Successful runs provide the ISO and floppy
+image as downloadable artifacts. See [the CI guide](jordyOS/CI.md).
 
 The material below is the original research write-up. Addresses, toolchain,
 application implementation, and file limits in that historical description

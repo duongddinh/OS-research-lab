@@ -1,0 +1,63 @@
+name: JordyOS tests
+
+"on":
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jordyos-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Native, QEMU, ISO and Linux TCP tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      TCP_LINUX_DIR: ${{ runner.temp }}/jordyos-linux
+    steps:
+      - name: Check out source and pinned dependencies
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+        with:
+          enable_kvm: false
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Test kernel, apps, firewall, native TCP and CD boot
+        run: nix develop --command make -C jordyOS test test-network-user test-iso
+
+      - name: Prepare checksum-pinned diskless Linux peer
+        run: |
+          nix develop --command python3 jordyOS/tools/prepare_tcp_linux.py \
+            --cache "$RUNNER_TEMP/jordyos-linux-assets" --output "$TCP_LINUX_DIR"
+
+      - name: Test real TCP transfers with Linux, packet loss and delay
+        run: nix develop --command make -C jordyOS test-tcp-linux
+
+      - name: Upload bootable images
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: jordyos-boot-images
+          path: |
+            jordyOS/jordyos.iso
+            jordyOS/os.img
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload test transcripts
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: jordyos-test-transcripts
+          path: /tmp/jordyos-*.log
+          if-no-files-found: ignore
+          retention-days: 7

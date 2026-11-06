@@ -16,7 +16,7 @@ x86-64 C code, independently of the eBPF firewall interpreter.
 
 ## Try it
 
-Initialize both pinned dependencies before building:
+Initialize the pinned dependencies before building:
 
 ```sh
 git submodule update --init --recursive

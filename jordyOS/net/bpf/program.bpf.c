@@ -19,8 +19,7 @@ MAP(early6,11,struct lpm_key,u32,MAX_RULES);
 MAP(early_enabled,2,u32,u32,1);
 MAP(metadata,2,u32,struct packet,1);
 static void *(*map_lookup)(void *, const void *) = (void *)1;
-/* Unchanged upstream counter helper. */
-INLINE void count(u32 index,u32 generation){struct counter *n=map_lookup(&stats,&index);if(n){if(n->generation!=generation){n->generation=generation;n->packets=0;}n->packets++;}}
+#include "ebpfw_count.h"
 struct xdp_md {u32 data,data_end,data_meta,ingress_ifindex,rx_queue_index,egress_ifindex;};
 #include "ebpfw_early.h"
 
