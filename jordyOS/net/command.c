@@ -1,12 +1,31 @@
 #include "network.h"
 #include "firewall.h"
 #include "fw_bpf.h"
+#include "larp.h"
 #include "../util.h"
 
 void net_print_number(uint32_t n) {
     char buffer[11]; unsigned i = sizeof buffer - 1; buffer[i] = 0;
     do { buffer[--i] = '0' + n % 10; n /= 10; } while (n);
     sys_write(buffer + i);
+}
+void larp_command(const char *arguments) {
+    if (!strcmp(arguments, "test")) {
+        const char *failure = larp_selftest();
+        if (failure) {
+            sys_write("LARP core self-test: FAIL: ");
+            sys_write(failure); sys_write("\n");
+        } else {
+            sys_write("LARP core self-test: PASS\n");
+            sys_write("Launch, growth, loss/ECN, RTT probe, recovery, arithmetic checked.\n");
+        }
+        sys_write("Synthetic feedback only; no TCP packets were sent.\n");
+    } else if (!*arguments || !strcmp(arguments, "status")) {
+        sys_write("LARP: upstream portable core compiled natively into the kernel.\n"
+            "Source: pinned vendor/tcplarp/larp_core.h (GPL-2.0-only).\n"
+            "TCP transport: not implemented; LARP is not controlling traffic.\n"
+            "Type larp test to exercise the controller with synthetic feedback.\n");
+    } else sys_write("larp status | test\n");
 }
 void net_print_ip(uint32_t ip) {
     for (unsigned i = 0; i < 4; i++) {

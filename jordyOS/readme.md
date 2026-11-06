@@ -59,6 +59,7 @@ launcher. QEMU's serial port can also be used for commands and automation.
 | `clear` / `help` | Clear the terminal / show commands |
 | `ebpfw help` | Native stateless IPv4 firewall commands |
 | `net` | Network status; `net up` starts an attached RTL8139 |
+| `larp` / `larp test` | Vendored LARP core status / synthetic controller self-test; no TCP transport yet |
 | `arch` | Live long-mode/paging status, pointer width, and ABI self-test |
 | `isolation` / `isolation test` | Isolation status / hardware fault and recovery checks |
 
@@ -223,6 +224,11 @@ The serial transcript is written to `/tmp/jordyos-smoke.log` by default.
 Set `QEMU` to choose another emulator binary and `SMOKE_LOG` for another log.
 
 ## Current limits
+
+TCP LARP's portable core is pinned under `vendor/tcplarp`, compiled into the
+kernel, and exercised by `larp test` and `make test-larp`. These tests use
+synthetic feedback; the core is not attached to live traffic because TCP
+connections and pacing are not implemented. See [net/LARP.md](net/LARP.md).
 
 This is an educational OS with CPU-enforced memory and privilege isolation for
 Apelang application processes. Each launch gets private code, data, heap,

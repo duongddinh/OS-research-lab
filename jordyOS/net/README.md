@@ -1,5 +1,9 @@
 # Native JordyOS eBPF firewall
 
+TCP LARP's separate, vendored native congestion-control core is documented in
+[LARP.md](LARP.md). It has a synthetic self-test; TCP connections are still
+not implemented.
+
 This firewall executes actual eBPF bytecode inside the freestanding x86-64
 JordyOS kernel. It includes [ebpfw](https://github.com/duongddinh/ebpfw)'s actual
 XDP source-block function and rule matcher, adapted from the pinned source
