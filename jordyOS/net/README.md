@@ -1,8 +1,8 @@
 # Native JordyOS eBPF firewall
 
 TCP LARP's separate, vendored native congestion-control core is documented in
-[LARP.md](LARP.md). It has a synthetic self-test; TCP connections are still
-not implemented.
+[LARP.md](LARP.md). It is the native TCP client's default sender controller;
+the shell supports bounded RAM-file upload, download and exchange.
 
 This firewall executes actual eBPF bytecode inside the freestanding x86-64
 JordyOS kernel. It includes [ebpfw](https://github.com/duongddinh/ebpfw)'s actual
@@ -158,11 +158,12 @@ the shell currently populates only IPv4 source-block maps.
 
 ARP is handled separately from IP policy. The guest only replies to valid
 Ethernet/IPv4 ARP requests for its own address from the lab subnet. ARP has no
-authentication and this implementation has no neighbor cache. Replies reuse
-the request's source Ethernet address; there is no gateway or ARP resolution
-for initiating connections. UDP checksums are validated on ingress; replies
-omit them as allowed by IPv4. TCP headers are validated and classified by
-policy, but there is no TCP state machine, connection, or listener.
+authentication. Replies reuse the request's source Ethernet address. The
+TCP client resolves one on-link peer per transfer using a solicited ARP reply,
+with retries and a five-second deadline; there is no gateway. UDP checksums
+are validated on ingress; replies omit them as allowed by IPv4. Native TCP
+ingress and egress pass through the same eBPF policy hooks. TCP has an active
+client state machine with LARP pacing, but no listener or general socket API.
 
 The driver discovers a legacy RTL8139 on PCI bus 0 and uses its BIOS-assigned
 I/O BAR. Static DMA buffers rely on the kernel's flat identity mapping. RX
@@ -225,7 +226,7 @@ Ethernet frames in a local pcap file.
 
 The [eBPF build and runtime guide](bpf/README.md) explains the real instruction
 format, supported ABI, map relocation, and runtime validation. Further work
-includes a timer/interrupt-driven network task, a TCP/IP stack, persistent
+includes a timer/interrupt-driven network task, a general socket API, persistent
 configuration, and connection tracking. The full upstream stateful program
 additionally requires its Netfilter/dynptr/kfunc, helper, and concurrency APIs.
 

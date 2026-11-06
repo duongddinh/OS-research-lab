@@ -2,6 +2,7 @@
 #include "firewall.h"
 #include "fw_bpf.h"
 #include "larp.h"
+#include "tcp_api.h"
 #include "../util.h"
 
 void net_print_number(uint32_t n) {
@@ -23,8 +24,8 @@ void larp_command(const char *arguments) {
     } else if (!*arguments || !strcmp(arguments, "status")) {
         sys_write("LARP: upstream portable core compiled natively into the kernel.\n"
             "Source: pinned vendor/tcplarp/larp_core.h (GPL-2.0-only).\n"
-            "TCP transport: not implemented; LARP is not controlling traffic.\n"
-            "Type larp test to exercise the controller with synthetic feedback.\n");
+            "LARP is the default TCP sender controller; type tcp for transfer status.\n"
+            "Type larp test for synthetic feedback checks; tcp demo IP PORT for real traffic.\n");
     } else sys_write("larp status | test\n");
 }
 void net_print_ip(uint32_t ip) {
@@ -149,7 +150,7 @@ void fw_command(char *arguments) {
         sys_write(native_network.up ? "RTL8139: up, receive/transmit hooks active.\n" :
             "RTL8139: down; attach -device rtl8139 and run net up.\n");
         sys_write("Validation: IPv4/transport lengths and checksums; fragments/options rejected.\n"
-            "Services: ICMP echo; optional UDP echo at 7777. TCP classification only.\n"
+            "Services: ICMP echo; optional UDP echo at 7777; active TCP file transfers.\n"
             "Polling requires console activity, yields, or guest wait calls.\n");
         return;
     }

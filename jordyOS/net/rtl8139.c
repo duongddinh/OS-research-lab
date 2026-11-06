@@ -1,6 +1,7 @@
 /* Polled legacy RTL8139, PCI bus 0. DMA uses identity-mapped static storage.
    Register semantics: QEMU hw/net/rtl8139.c; no IRQ or C+ mode required. */
 #include "network.h"
+#include "tcp_api.h"
 #include "../util.h"
 
 #define RX_SIZE 8192u
@@ -70,6 +71,7 @@ bool rtl_up(void) {
     return false;
 }
 void rtl_down(void) {
+    tcp_net_down();
     if (io) out8(io + 0x37, 0);
     native_network.up = false;
 }
@@ -107,4 +109,5 @@ void rtl_poll(void) {
         out16(io + 0x38, (uint16_t)(rx_offset - 16));
     }
     out16(io + 0x3e, 0x0f);
+    tcp_net_poll();
 }

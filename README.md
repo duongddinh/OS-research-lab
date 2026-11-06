@@ -10,8 +10,8 @@ pinned as a Git submodule under `vendor/apelang`.
 
 TCP LARP's portable congestion-control core is also pinned as a Git submodule
 under `vendor/tcplarp` and compiled natively into the kernel. Run `larp test`
-to exercise the upstream algorithm with synthetic feedback. TCP connections
-are not implemented yet, so LARP does not control live traffic. See the
+to exercise the upstream algorithm with synthetic feedback. The native TCP
+client uses LARP by default for paced RAM-file transfers up to 16 KiB. See the
 [LARP integration guide](jordyOS/net/LARP.md) for scope, tests, and updates.
 
 The BIOS loader enters through 16/32-bit bootstrap code, enables paging, and

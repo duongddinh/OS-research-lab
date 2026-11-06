@@ -1,6 +1,7 @@
 #include "network.h"
 #include "firewall.h"
 #include "fw_bpf.h"
+#include "tcp_api.h"
 #include "../util.h"
 
 Network native_network;
@@ -22,6 +23,7 @@ void net_receive(uint8_t *frame, size_t size) {
     }
     uint16_t type = net_read16(frame + 12);
     if (type == 0x0806) {
+        tcp_net_arp(frame,size);
         /* Only answer Ethernet/IPv4 ARP requests for our fixed address.
            No neighbor cache, unsolicited replies, or proxy ARP. */
         if (size < 42 || net_read16(frame + 14) != 1 || net_read16(frame + 16) != 0x0800 ||
@@ -43,6 +45,7 @@ void net_receive(uint8_t *frame, size_t size) {
         native_network.ignored++; return;
     }
     if (!fw_accept(&native_firewall, &packet, FW_IN)) return;
+    if (packet.protocol==NET_TCP) { tcp_net_input(frame,&packet); return; }
     uint8_t *body = ip + 20;
     if (packet.protocol == NET_ICMP && body[0] == 8 && body[1] == 0) {
         body[0] = 0; net_write16(body + 2, 0);
@@ -50,7 +53,7 @@ void net_receive(uint8_t *frame, size_t size) {
     } else if (packet.protocol == NET_UDP && packet.destination_port == 7777 && native_network.echo) {
         net_write16(body, packet.destination_port); net_write16(body + 2, packet.source_port);
         net_write16(body + 6, 0); /* IPv4 UDP permits omitted checksum. */
-    } else return; /* TCP is classified only; no TCP listener/stack yet. */
+    } else return;
     net_write32(ip + 12, NET_IP); net_write32(ip + 16, packet.source);
     ip[8] = 64; net_write16(ip + 10, 0); net_write16(ip + 10, net_checksum(ip, 20, 0));
     Packet outgoing;
