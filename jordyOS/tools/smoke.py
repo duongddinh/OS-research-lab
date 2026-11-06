@@ -6,8 +6,12 @@ import subprocess
 import time
 
 qemu=os.environ.get("QEMU", "qemu-system-x86_64")
-p=subprocess.Popen([qemu,"-cpu","qemu64","-drive","if=floppy,format=raw,file=os.img","-snapshot",
-    "-boot","a","-m","32","-display","none","-monitor","none","-serial","stdio",
+media=os.environ.get("JORDY_BOOT_MEDIA", "floppy")
+if media not in ("floppy", "cdrom"):
+    raise ValueError("JORDY_BOOT_MEDIA must be floppy or cdrom")
+drive="if=ide,media=cdrom,format=raw,file=jordyos.iso" if media=="cdrom" else "if=floppy,format=raw,file=os.img"
+p=subprocess.Popen([qemu,"-cpu","qemu64","-drive",drive,"-snapshot",
+    "-boot","d" if media=="cdrom" else "a","-m","32","-display","none","-monitor","none","-serial","stdio",
     "-nic","none","-no-reboot"],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 selector=selectors.DefaultSelector(); selector.register(p.stdout,selectors.EVENT_READ)
 transcript=bytearray()

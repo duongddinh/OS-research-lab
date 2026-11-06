@@ -8,6 +8,11 @@ See [the current build and usage guide](jordyOS/readme.md) for the reproducible
 Nix setup, QEMU commands, tests, and limitations. The Apelang compiler/VM is
 pinned as a Git submodule under `vendor/apelang`.
 
+`make -C jordyOS iso` creates `jordyOS/jordyos.iso`, a BIOS-bootable live CD.
+See [VM setup and compatibility](jordyOS/VIRTUAL_MACHINES.md) for VirtualBox,
+VMware and QEMU. CD boot is verified in QEMU; VirtualBox/VMware on Intel/AMD
+are unverified, and their Apple Silicon versions cannot run this x86-64 guest.
+
 TCP LARP's portable congestion-control core is also pinned as a Git submodule
 under `vendor/tcplarp` and compiled natively into the kernel. Run `larp test`
 to exercise the upstream algorithm with synthetic feedback. The native TCP

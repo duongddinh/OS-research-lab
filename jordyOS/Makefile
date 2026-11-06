@@ -63,6 +63,14 @@ bootloader.bin: bootloader.asm kernel.bin
 	$(NASM) -f bin -DKERNEL_SECTORS=$$(python3 -c 'import os; print((os.path.getsize("kernel.bin")+511)//512)') $< -o $@
 os.img: bootloader.bin kernel.bin tools/image.py
 	python3 tools/image.py
+iso: jordyos.iso
+jordyos.iso: os.img tools/iso.py
+	python3 tools/iso.py os.img $@
+run-iso: jordyos.iso
+	$(QEMU) -cpu qemu64 -drive if=ide,media=cdrom,format=raw,file=jordyos.iso -boot d -m 32 -serial stdio -snapshot -nic none
+test-iso: jordyos.iso
+	python3 tools/test_iso.py
+	JORDY_BOOT_MEDIA=cdrom SMOKE_LOG=/tmp/jordyos-iso-smoke.log python3 tools/smoke.py
 run: os.img
 	$(QEMU) -cpu qemu64 -drive if=floppy,format=raw,file=os.img -boot a -m 32 -serial stdio -snapshot -nic none
 run-net: os.img
@@ -93,7 +101,7 @@ test-isolation: os.img
 test: os.img test-boot test-isolation test-snake test-firewall test-larp test-tcp test-network
 	python3 tools/smoke.py
 clean:
-	rm -f $(OBJS) $(OBJS:.o=.d) $(USER_OBJS) $(USER_OBJS:.o=.d) *.bin *.elf os.img ape/programs.h net/bpf/programs.h net/bpf/program.bpf.o user/runtime.elf user/image.h
+	rm -f $(OBJS) $(OBJS:.o=.d) $(USER_OBJS) $(USER_OBJS:.o=.d) *.bin *.elf os.img jordyos.iso ape/programs.h net/bpf/programs.h net/bpf/program.bpf.o user/runtime.elf user/image.h
 -include $(OBJS:.o=.d) $(USER_OBJS:.o=.d)
-.PHONY: all run run-net test test-boot test-isolation test-snake test-firewall test-larp test-tcp test-tcp-linux test-network test-network-user clean
+.PHONY: all iso run run-iso run-net test test-iso test-boot test-isolation test-snake test-firewall test-larp test-tcp test-tcp-linux test-network test-network-user clean
 $(OBJS) $(USER_OBJS): Makefile

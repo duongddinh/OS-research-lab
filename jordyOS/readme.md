@@ -25,6 +25,12 @@ make -C jordyOS
 make -C jordyOS run
 ```
 
+For a bootable CD/DVD image, use `make -C jordyOS iso`. This creates
+`jordyos.iso`; `make -C jordyOS run-iso` boots it in QEMU and `make -C jordyOS
+test-iso` checks the CD layout and runs the application smoke suite from CD.
+See [VIRTUAL_MACHINES.md](VIRTUAL_MACHINES.md) for legacy BIOS settings,
+VirtualBox/VMware limitations, and the x86-versus-Arm host requirement.
+
 The branch containing this integration must be checked out until it is merged.
 `flake.lock` pins NASM, LLVM/Clang, LLD, QEMU, Python, and Make. `JORDY_CC`
 selects the unwrapped compiler for the freestanding x86_64 target. QEMU uses
