@@ -101,9 +101,10 @@ addresses. This does not introduce an IOMMU or isolated DMA address space.
 
 The eBPF interpreter still runs real bytecode. Its virtual registers are
 64-bit values, now manipulated by a 64-bit C kernel. Map/control-plane layouts
-and the built-in programs' bytecode remain unchanged. The networking lab
-remains limited to ARP, local IPv4, ICMP echo and the optional UDP echo service;
-this architecture change does not add TCP connections, DNS or internet access.
+and the built-in programs' bytecode remain unchanged. The networking lab has
+ARP, local IPv4, ICMP/UDP echo and a bounded active TCP file-transfer client.
+TCP uses the vendored LARP core by default; see [net/LARP.md](net/LARP.md).
+There is no DNS, gateway or general Internet access.
 
 ## Validation
 

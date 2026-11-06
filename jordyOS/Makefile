@@ -6,9 +6,10 @@ BPF_CC = $(if $(JORDY_CC),$(JORDY_CC),clang)
 QEMU ?= qemu-system-x86_64
 export QEMU
 APELANG_DIR ?= ../vendor/apelang
+TCPLARP_DIR ?= ../vendor/tcplarp
 CFLAGS = --target=x86_64-none-elf -march=x86-64 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -fno-pie -mno-red-zone -mcmodel=small -fno-asynchronous-unwind-tables -O2 -Wall -Wextra -Wno-unused-parameter -std=c99
 APEFLAGS = $(CFLAGS) -DAPE_FREESTANDING -Iape -I$(APELANG_DIR)/src
-OBJS = kernel_entry.o ctx_switch.o interrupts.o kernel.o gui.o arch.o isolation.o ape/platform.o ape/seed.o net/packet.o net/firewall.o net/command.o net/network.o net/rtl8139.o net/bpf_vm.o net/fw_bpf.o
+OBJS = kernel_entry.o ctx_switch.o interrupts.o kernel.o gui.o arch.o isolation.o ape/platform.o ape/seed.o net/packet.o net/firewall.o net/command.o net/network.o net/rtl8139.o net/bpf_vm.o net/fw_bpf.o net/larp.o net/tcp.o net/tcp_native.o
 USER_OBJS = user/start.o user/main.o user/syscalls.o user/lib.o user/platform.o user/app_ape.o user/compiler.o user/lexer.o user/vm.o
 USERFLAGS = $(APEFLAGS) -DJORDY_USER
 all: os.img
@@ -39,6 +40,10 @@ user/image.h: user/runtime.elf tools/embed_user.py
 isolation.o: user/image.h
 %.o: %.c
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+net/larp.o: net/larp.c net/larp.h $(TCPLARP_DIR)/larp_core.h
+	$(CC) $(CFLAGS) -I$(TCPLARP_DIR) -MMD -MP -c $< -o $@
+net/tcp.o net/tcp_native.o: net/%.o: net/%.c net/tcp.h $(TCPLARP_DIR)/larp_core.h
+	$(CC) $(CFLAGS) -I$(TCPLARP_DIR) -MMD -MP -c $< -o $@
 net/bpf/program.bpf.o: net/bpf/program.bpf.c net/bpf/ebpfw_shared.h net/bpf/ebpfw_early.h Makefile
 	$(BPF_CC) -target bpfel -mcpu=v1 -O2 -Wall -Wextra -Werror -c $< -o $@
 net/bpf/programs.h: net/bpf/program.bpf.o tools/embed_bpf.py
@@ -70,6 +75,12 @@ test-snake:
 test-firewall: net/bpf/programs.h
 	python3 tools/test_firewall.py "$(HOST_CC)" "$(HOST_CFLAGS)"
 	python3 tools/test_embed_bpf.py
+test-larp:
+	python3 tools/test_larp.py "$(HOST_CC)" "$(HOST_CFLAGS)" "$(TCPLARP_DIR)"
+test-tcp:
+	python3 tools/test_tcp.py "$(HOST_CC)" "$(HOST_CFLAGS)" "$(TCPLARP_DIR)"
+test-tcp-linux: os.img
+	python3 tools/test_tcp_linux.py
 test-network: os.img
 	python3 tools/test_network.py
 test-network-user: os.img
@@ -79,10 +90,10 @@ test-boot: os.img
 test-isolation: os.img
 	python3 tools/test_embed_user.py
 	python3 tools/test_isolation.py
-test: os.img test-boot test-isolation test-snake test-firewall test-network
+test: os.img test-boot test-isolation test-snake test-firewall test-larp test-tcp test-network
 	python3 tools/smoke.py
 clean:
 	rm -f $(OBJS) $(OBJS:.o=.d) $(USER_OBJS) $(USER_OBJS:.o=.d) *.bin *.elf os.img ape/programs.h net/bpf/programs.h net/bpf/program.bpf.o user/runtime.elf user/image.h
 -include $(OBJS:.o=.d) $(USER_OBJS:.o=.d)
-.PHONY: all run run-net test test-boot test-isolation test-snake test-firewall test-network test-network-user clean
+.PHONY: all run run-net test test-boot test-isolation test-snake test-firewall test-larp test-tcp test-tcp-linux test-network test-network-user clean
 $(OBJS) $(USER_OBJS): Makefile

@@ -1,3 +1,6 @@
 [submodule "apelang"]
 	path = vendor/apelang
 	url = https://github.com/duongddinh/apelang.git
+[submodule "vendor/tcplarp"]
+	path = vendor/tcplarp
+	url = https://github.com/duongddinh/tcplarp.git

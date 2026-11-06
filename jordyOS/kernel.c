@@ -6,6 +6,8 @@
 #include "gui.h"
 #include "net/network.h"
 #include "net/firewall.h"
+#include "net/larp.h"
+#include "net/tcp_api.h"
 #include "arch.h"
 #include "isolation.h"
 
@@ -340,6 +342,10 @@ static void shell(void) {
       fw_command(shell_cmd_buffer + (shell_cmd_buffer[5] ? 6 : 5));
     } else if (!strcmp(shell_cmd_buffer, "net") || !memcmp(shell_cmd_buffer, "net ", 4)) {
       net_command(shell_cmd_buffer + (shell_cmd_buffer[3] ? 4 : 3));
+    } else if (!strcmp(shell_cmd_buffer, "larp") || !memcmp(shell_cmd_buffer, "larp ", 5)) {
+      larp_command(shell_cmd_buffer + (shell_cmd_buffer[4] ? 5 : 4));
+    } else if (!strcmp(shell_cmd_buffer, "tcp") || !memcmp(shell_cmd_buffer, "tcp ", 4)) {
+      tcp_command(shell_cmd_buffer + (shell_cmd_buffer[3] ? 4 : 3));
     } else if (!strcmp(shell_cmd_buffer, "arch")) {
       arch_report();
     } else if (!strcmp(shell_cmd_buffer, "isolation") || !memcmp(shell_cmd_buffer,"isolation ",10)) {
@@ -358,6 +364,8 @@ static void shell(void) {
       sys_write("  isolation test  - Exercise ring-3 memory/privilege protection\n");
       sys_write("  ebpfw help      - Native IPv4 firewall controls\n");
       sys_write("  net             - Network status (net up to start RTL8139)\n");
+      sys_write("  larp test       - Test vendored LARP controller\n");
+      sys_write("  tcp             - TCP file transfers; default controller LARP\n");
       sys_write("  desktop         - Open graphical launcher\n");
       sys_write("  snake           - Play Snake (Apelang graphics)\n");
       sys_write("  history         - View project development dates\n");

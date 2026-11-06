@@ -59,6 +59,11 @@ launcher. QEMU's serial port can also be used for commands and automation.
 | `clear` / `help` | Clear the terminal / show commands |
 | `ebpfw help` | Native stateless IPv4 firewall commands |
 | `net` | Network status; `net up` starts an attached RTL8139 |
+| `larp` / `larp test` | Default TCP controller / synthetic LARP self-test |
+| `tcp` / `tcp demo IP PORT` | TCP status / 16 KiB binary echo check using LARP |
+| `tcp send IP PORT FILE` | Upload a RAM file, then wait for peer EOF |
+| `tcp recv IP PORT FILE` | Download a RAM file (up to 16 KiB) |
+| `tcp exchange IP PORT SOURCE DESTINATION` | Upload a RAM file and save the response |
 | `arch` | Live long-mode/paging status, pointer width, and ABI self-test |
 | `isolation` / `isolation test` | Isolation status / hardware fault and recovery checks |
 
@@ -112,7 +117,9 @@ an RTL8139 on a QEMU user network with a loopback-only UDP forwarding
 port. The guest interface starts down, the UDP listener starts off, and the
 firewall starts disabled. Configure rules and enable filtering before `net up`.
 Rules and counters are lost on reboot. IPv6, IP options, fragmentation,
-connection tracking, routing, NAT, and TCP connections are not implemented.
+connection tracking, routing and NAT are not implemented. The TCP client uses
+LARP by default and resolves an on-link peer using ARP. See [net/LARP.md](net/LARP.md)
+for the binary transfer demo, limits, and Linux interoperability tests.
 
 ## Project history
 
@@ -223,6 +230,12 @@ The serial transcript is written to `/tmp/jordyos-smoke.log` by default.
 Set `QEMU` to choose another emulator binary and `SMOKE_LOG` for another log.
 
 ## Current limits
+
+TCP LARP's portable core is pinned under `vendor/tcplarp` and is the native
+TCP sender's default controller. `larp test` uses synthetic feedback;
+`tcp demo` transfers real binary data. The first TCP implementation supports
+one foreground, active-open stream, with files up to 16 KiB on the local /24;
+there is no server/listen or user-process socket API. See [net/LARP.md](net/LARP.md).
 
 This is an educational OS with CPU-enforced memory and privilege isolation for
 Apelang application processes. Each launch gets private code, data, heap,

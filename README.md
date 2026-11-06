@@ -8,6 +8,12 @@ See [the current build and usage guide](jordyOS/readme.md) for the reproducible
 Nix setup, QEMU commands, tests, and limitations. The Apelang compiler/VM is
 pinned as a Git submodule under `vendor/apelang`.
 
+TCP LARP's portable congestion-control core is also pinned as a Git submodule
+under `vendor/tcplarp` and compiled natively into the kernel. Run `larp test`
+to exercise the upstream algorithm with synthetic feedback. The native TCP
+client uses LARP by default for paced RAM-file transfers up to 16 KiB. See the
+[LARP integration guide](jordyOS/net/LARP.md) for scope, tests, and updates.
+
 The BIOS loader enters through 16/32-bit bootstrap code, enables paging, and
 transfers to the x86-64 kernel. Apelang applications run in ring 3 with private
 page tables, protected code/data, and checked system calls. The kernel shell
