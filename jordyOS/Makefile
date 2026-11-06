@@ -7,6 +7,8 @@ QEMU ?= qemu-system-x86_64
 export QEMU
 APELANG_DIR ?= ../vendor/apelang
 TCPLARP_DIR ?= ../vendor/tcplarp
+EBPFW_DIR ?= ../vendor/ebpfw
+EBPFW_HEADERS = net/bpf/ebpfw_shared.h net/bpf/ebpfw_early.h net/bpf/ebpfw_count.h
 CFLAGS = --target=x86_64-none-elf -march=x86-64 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -fno-pie -mno-red-zone -mcmodel=small -fno-asynchronous-unwind-tables -O2 -Wall -Wextra -Wno-unused-parameter -std=c99
 APEFLAGS = $(CFLAGS) -DAPE_FREESTANDING -Iape -I$(APELANG_DIR)/src
 OBJS = kernel_entry.o ctx_switch.o interrupts.o kernel.o gui.o arch.o isolation.o ape/platform.o ape/seed.o net/packet.o net/firewall.o net/command.o net/network.o net/rtl8139.o net/bpf_vm.o net/fw_bpf.o net/larp.o net/tcp.o net/tcp_native.o
@@ -44,7 +46,9 @@ net/larp.o: net/larp.c net/larp.h $(TCPLARP_DIR)/larp_core.h
 	$(CC) $(CFLAGS) -I$(TCPLARP_DIR) -MMD -MP -c $< -o $@
 net/tcp.o net/tcp_native.o: net/%.o: net/%.c net/tcp.h $(TCPLARP_DIR)/larp_core.h
 	$(CC) $(CFLAGS) -I$(TCPLARP_DIR) -MMD -MP -c $< -o $@
-net/bpf/program.bpf.o: net/bpf/program.bpf.c net/bpf/ebpfw_shared.h net/bpf/ebpfw_early.h Makefile
+$(EBPFW_HEADERS) &: $(EBPFW_DIR)/bpf/stateful.c net/bpf/upstream.json tools/embed_ebpfw.py
+	python3 tools/embed_ebpfw.py $(EBPFW_DIR) net/bpf/upstream.json net/bpf
+net/bpf/program.bpf.o: net/bpf/program.bpf.c $(EBPFW_HEADERS) Makefile
 	$(BPF_CC) -target bpfel -mcpu=v1 -O2 -Wall -Wextra -Werror -c $< -o $@
 net/bpf/programs.h: net/bpf/program.bpf.o tools/embed_bpf.py
 	python3 tools/embed_bpf.py $< $@
@@ -81,6 +85,7 @@ test-snake:
 	$(MAKE) -C $(APELANG_DIR) CC=$(HOST_CC)
 	python3 tools/test_snake.py $(APELANG_DIR)/apeslang
 test-firewall: net/bpf/programs.h
+	EBPFW_DIR="$(EBPFW_DIR)" python3 tools/test_ebpfw_vendor.py
 	python3 tools/test_firewall.py "$(HOST_CC)" "$(HOST_CFLAGS)"
 	python3 tools/test_embed_bpf.py
 test-larp:
@@ -101,7 +106,7 @@ test-isolation: os.img
 test: os.img test-boot test-isolation test-snake test-firewall test-larp test-tcp test-network
 	python3 tools/smoke.py
 clean:
-	rm -f $(OBJS) $(OBJS:.o=.d) $(USER_OBJS) $(USER_OBJS:.o=.d) *.bin *.elf os.img jordyos.iso ape/programs.h net/bpf/programs.h net/bpf/program.bpf.o user/runtime.elf user/image.h
+	rm -f $(OBJS) $(OBJS:.o=.d) $(USER_OBJS) $(USER_OBJS:.o=.d) *.bin *.elf os.img jordyos.iso ape/programs.h net/bpf/programs.h net/bpf/program.bpf.o $(EBPFW_HEADERS) user/runtime.elf user/image.h
 -include $(OBJS:.o=.d) $(USER_OBJS:.o=.d)
 .PHONY: all iso run run-iso run-net test test-iso test-boot test-isolation test-snake test-firewall test-larp test-tcp test-tcp-linux test-network test-network-user clean
 $(OBJS) $(USER_OBJS): Makefile

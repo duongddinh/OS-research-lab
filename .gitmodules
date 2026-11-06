@@ -4,3 +4,6 @@
 [submodule "vendor/tcplarp"]
 	path = vendor/tcplarp
 	url = https://github.com/duongddinh/tcplarp.git
+[submodule "vendor/ebpfw"]
+	path = vendor/ebpfw
+	url = https://github.com/duongddinh/ebpfw.git

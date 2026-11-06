@@ -36,6 +36,14 @@ polled RTL8139 packet path. See the
 its limits. The pinned upstream code is compiled to eBPF bytecode and runs
 inside JordyOS. The full Linux Go/Netfilter/stateful implementation is not
 ported; this is a bounded native adaptation with its own map/runtime ABI.
+The upstream repository is pinned under `vendor/ebpfw`; supported code is
+derived from that submodule during the build.
+
+The [JordyOS test workflow](.github/workflows/jordyos-tests.yml) runs on pull
+requests or manually, using the pinned Nix environment and all three
+submodules. It covers the native and QEMU suites, CD boot, and real Linux TCP
+interoperability under loss/delay. Successful runs provide the ISO and floppy
+image as downloadable artifacts. See [the CI guide](jordyOS/CI.md).
 
 The material below is the original research write-up. Addresses, toolchain,
 application implementation, and file limits in that historical description
