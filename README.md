@@ -43,7 +43,9 @@ The [JordyOS test workflow](.github/workflows/jordyos-tests.yml) runs on pull
 requests or manually, using the pinned Nix environment and all three
 submodules. It covers the native and QEMU suites, CD boot, and real Linux TCP
 interoperability under loss/delay. Successful runs provide the ISO and floppy
-image as downloadable artifacts. See [the CI guide](jordyOS/CI.md).
+image as downloadable artifacts. CI uses `make -C jordyOS test-all`, which
+checks that every test file is registered and runs the full suite. See
+[the CI guide](jordyOS/CI.md) and [test inventory](jordyOS/tools/README.md).
 
 The material below is the original research write-up. Addresses, toolchain,
 application implementation, and file limits in that historical description

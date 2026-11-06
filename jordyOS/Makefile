@@ -103,10 +103,17 @@ test-boot: os.img
 test-isolation: os.img
 	python3 tools/test_embed_user.py
 	python3 tools/test_isolation.py
-test: os.img test-boot test-isolation test-snake test-firewall test-larp test-tcp test-network
+test-smoke: os.img
 	python3 tools/smoke.py
+test: os.img test-boot test-isolation test-snake test-firewall test-larp test-tcp test-network test-smoke
+lint-workflow:
+	actionlint ../.github/workflows/jordyos-tests.yml
+test-all:
+	python3 tools/run_tests.py --make "$(MAKE)"
+test-inventory:
+	python3 tools/run_tests.py --list
 clean:
 	rm -f $(OBJS) $(OBJS:.o=.d) $(USER_OBJS) $(USER_OBJS:.o=.d) *.bin *.elf os.img jordyos.iso ape/programs.h net/bpf/programs.h net/bpf/program.bpf.o $(EBPFW_HEADERS) user/runtime.elf user/image.h
 -include $(OBJS:.o=.d) $(USER_OBJS:.o=.d)
-.PHONY: all iso run run-iso run-net test test-iso test-boot test-isolation test-snake test-firewall test-larp test-tcp test-tcp-linux test-network test-network-user clean
+.PHONY: all iso run run-iso run-net test test-all test-inventory test-smoke lint-workflow test-iso test-boot test-isolation test-snake test-firewall test-larp test-tcp test-tcp-linux test-network test-network-user clean
 $(OBJS) $(USER_OBJS): Makefile
